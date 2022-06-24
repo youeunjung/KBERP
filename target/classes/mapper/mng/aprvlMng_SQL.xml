@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="aprvlMng">
+
+	<select id="getCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM FCLTY_RSVTN FR INNER JOIN FCLTY F
+							ON FR.FCLTY_NUM = F.FCLTY_NUM
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					AND RSVTN_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 1">
+					AND FCLTY_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	 <select id="aprvlMngList" resultType="hashmap" parameterType="hashmap">
+		SELECT *
+		FROM (SELECT FR.RSVTN_NUM, FR.FCLTY_NUM, F.FCLTY_NAME, E.EMP_NAME,START_TIME, END_TIME,
+				TO_CHAR(RSVTN_DATE, 'YYYY-MM-DD') AS RSVTN_DATE, STS_NUM,
+				 ROW_NUMBER() OVER(ORDER BY FR.RSVTN_NUM DESC) AS RNUM
+		FROM FCLTY_RSVTN FR INNER JOIN FCLTY F
+		                    ON FR.FCLTY_NUM = F.FCLTY_NUM
+		                    INNER JOIN EMP E
+		                    ON FR.EMP_NUM = E.EMP_NUM
+                            INNER JOIN RSVTN_TIME_DVSN RTD
+                            ON FR.TIME_DVSN_NUM = RTD.TIME_DVSN_NUM 
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''"> 
+					<choose>
+						<when test="searchGbn == 0">
+							AND FR.RSVTN_NUM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 1">
+							AND FCLTY_NAME LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				) A
+				WHERE A.RNUM BETWEEN #{startCount} AND #{endCount} 
+	</select>
+	
+	<select id="aprvlMngDtlView" resultType="hashmap" parameterType="hashmap">
+		SELECT FR.RSVTN_NUM, FR.FCLTY_NUM, F.FCLTY_NAME, E.EMP_NAME, PRCS_DATE,
+				TO_CHAR(RSVTN_DATE, 'YYYY-MM-DD') AS RSVTN_DATE, START_TIME, END_TIME,USE_NUM_OF_PL, USE_USE,STS_NUM,
+				 ROW_NUMBER() OVER(ORDER BY FR.RSVTN_NUM DESC) AS RNUM
+		FROM FCLTY_RSVTN FR INNER JOIN FCLTY F
+		                    ON FR.FCLTY_NUM = F.FCLTY_NUM
+		                    INNER JOIN EMP E
+		                    ON FR.EMP_NUM = E.EMP_NUM
+                             INNER JOIN RSVTN_TIME_DVSN RTD
+                            ON FR.TIME_DVSN_NUM = RTD.TIME_DVSN_NUM 
+		WHERE RSVTN_NUM = #{num}
+	</select>
+	
+	<update id="aprvl" parameterType="hashmap">
+		UPDATE FCLTY_RSVTN SET STS_NUM = 2, PRCS_DATE = SYSDATE
+		WHERE RSVTN_NUM = #{num}
+	</update>
+	
+	<update id="reject" parameterType="hashmap">
+		UPDATE FCLTY_RSVTN SET STS_NUM = 3, PRCS_DATE = SYSDATE
+		WHERE RSVTN_NUM = #{num}
+	</update>
+</mapper>

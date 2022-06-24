@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="acnt">
+	<select id ="getAcntMainList" resultType="hashmap" parameterType="hashmap">
+		SELECT AC.SUB_CTGR_ACNT_CODE, AC.ACNT_NAME
+		FROM( SELECT MAIN_CTGR_ACNT_CODE, SUB_CTGR_ACNT_CODE, ACNT_NAME, ABSTRCT, 
+				     ROW_NUMBER() OVER(ORDER BY SUB_CTGR_ACNT_CODE) AS RNUM
+			  FROM ACNT_CODE
+			  WHERE MAIN_CTGR_ACNT_CODE = 0
+			  AND DEL = 0) AC
+		WHERE AC.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	<select id ="getAcntMainCnt" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM ACNT_CODE
+		WHERE MAIN_CTGR_ACNT_CODE = 0
+		AND DEL = 0
+	</select>
+	<select id ="getAcntSubList" resultType="hashmap" parameterType="hashmap">
+		SELECT AC.SUB_CTGR_ACNT_CODE, AC.ACNT_NAME, AC.ABSTRCT
+		FROM( SELECT MAIN_CTGR_ACNT_CODE, SUB_CTGR_ACNT_CODE, ACNT_NAME, ABSTRCT, 
+				     ROW_NUMBER() OVER(ORDER BY SUB_CTGR_ACNT_CODE) AS RNUM
+			  FROM ACNT_CODE
+			  WHERE MAIN_CTGR_ACNT_CODE = #{no}
+			  AND DEL = 0 ) AC
+		WHERE AC.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	<select id ="getAcntSubCnt" resultType="Integer" >
+		SELECT COUNT(*) AS CNT
+		FROM ACNT_CODE
+		WHERE MAIN_CTGR_ACNT_CODE = #{no}
+		AND DEL = 0
+	</select>
+	
+	<select id ="getAcntMaxSubdata" resultType="Integer" >
+		SELECT MAX(SUB_CTGR_ACNT_CODE) AS MAXS
+		FROM ACNT_CODE
+		WHERE MAIN_CTGR_ACNT_CODE = #{no}
+	</select>
+	<!-- 소분류 번호 생성용 -->
+	<select id ="getAcntMaxSubCnt" resultType="Integer" >
+		SELECT COUNT(*) AS CNT
+		FROM ACNT_CODE
+		WHERE MAIN_CTGR_ACNT_CODE = #{no}
+	</select>
+	<insert id="WriteAcntRgstrtn" parameterType="hashmap">
+		INSERT INTO ACNT_CODE(MAIN_CTGR_ACNT_CODE,SUB_CTGR_ACNT_CODE,EMP_NUM,ACNT_NAME,ABSTRCT)
+		VALUES(#{no},#{sub_no},#{empNum},#{sub_name},#{abs})
+	</insert>
+	<update id="UpdateAcntRgstrtn" parameterType="hashmap">
+		UPDATE ACNT_CODE SET ACNT_NAME = #{updatesubname}, ABSTRCT= #{updateabs}
+		WHERE MAIN_CTGR_ACNT_CODE = #{update_no} AND SUB_CTGR_ACNT_CODE = #{updatesub_no}
+	</update>
+	<update id="DeleteAcntRgstrtn" parameterType="hashmap">
+		UPDATE ACNT_CODE SET DEL = 1
+		WHERE MAIN_CTGR_ACNT_CODE = #{delete_no} AND SUB_CTGR_ACNT_CODE = #{deletesub_no}
+	</update>
+	
+
+</mapper>

@@ -1,0 +1,121 @@
+@charset "UTF-8";
+
+.board_area {
+	width : calc(100% - 340px);
+	display : inline-block;
+	padding : 10px 20px;
+
+}
+
+
+.body_content {
+	position:relative;
+	max-width:1200px;
+	padding : 0 10px;
+	
+	margin-left: 0;
+}
+
+
+.wrap_content {
+	display : block;
+}
+
+
+.page_header {
+	margin-bottom : 10px;	
+}
+
+
+.page_header h2{
+	line-height: 30px;
+	color : #2e83f2;
+	font-size: 16pt;
+	font-weight: bold;
+	text-shadow: 0px 0 1 #7b7b7b;
+}
+
+
+.content_area {
+	color : #444;
+	font-size : 20px;
+	line-height: 1.5;
+	padding : 20px 0px;
+	max-width : 1000px;	
+}
+
+
+.title-area {
+	margin-bottom : 30px;
+}
+
+
+.title {
+	font-size:22px;
+	font-weight: bold;
+	text-indent: 10px;
+	padding : 10px 0px;
+	border-top : 3px solid gray;
+}
+
+
+.writer_area {
+	background-color: #fafafa;
+	border-bottom : 1px solid gray;
+	display: flex;
+}
+
+.write_info {
+	float : left;
+}
+
+
+.write_info .writer{
+	padding : 8px 10px;
+	display: inline-block;
+	font-size : 15px;
+	font-weight: bold;
+}
+
+.write_info .date {
+	padding : 8px 10px;
+	display : inline-block;
+	font-size : 13px;
+}
+
+.content {
+	padding : 0 10px;
+	margin-bottom : 30px;
+}
+
+
+.content_footer {
+	padding : 15px 0px;
+}
+
+
+.content_footer .btn {
+	cursor: pointer;
+	font-size : 15px;
+	height : 35px;
+	display : inline-block;
+	padding : 5px;
+	margin : 5px;
+	background-color : #F2CB05;
+}
+
+.content_footer .list {
+	float : left;
+}
+
+.content_footer .correct {
+	float : right;
+}
+
+.content_footer .delete {
+	float : right;
+}
+
+.wrap_comment {
+	display : block; 	
+}

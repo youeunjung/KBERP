@@ -1,0 +1,184 @@
+@charset "UTF-8";
+/* 가로 사이즈 조정용 */
+.cont_wrap {
+	width: 1013px;
+}
+/* 개인 작업 영역 */
+.body {
+	display: block;
+	background-color: white;
+	width: 1013px;
+	height: 100%;
+	margin: auto;
+}
+
+.bodyWrap {
+	display: block;
+	background-color: white;
+	width: 927px;
+	height: 100%;
+	margin: 40px auto;
+}
+
+/* sts */
+.sts {
+	display: inline-block;
+	width: 100%;
+	height: 30px;
+	text-align: center;
+	margin-top: 10px;
+}
+
+.sts_list {
+	display: inline-block;
+	vertical-align: middle;
+	width: 130px;
+	margin: 0 30px;
+	padding: 8px 5px;
+	font-size: 10pt;
+	text-align: center;
+	background-color: #f2f2f2;
+	border-radius: 5px;
+}
+.sts_list:hover {
+   font-weight: bold;
+   cursor: pointer;
+   background-color: #F2B705;
+}
+
+.sts_list:active {
+   width: 130pxpx;
+   margin: 0 30px;
+   padding: 8px 5px;
+   background-color: #F2CB05;
+   cursor: pointer;
+   font-weight: bold;
+}
+.tLine{
+	background-color: #4B94F2;
+	width: 927px;
+	height: 3px;
+	margin: 10px auto;
+}
+/********** srch_table **********/
+.srch_table {
+	border-collapse: collapse;
+	background-color: #f2f2f2;
+	width: 100%;
+	font-size: 10.5pt;
+	text-align: left;
+	margin: 10px 0px;
+}
+
+.srch_table tr {
+	height: 40px;
+}
+
+.srch_table tr:nth-child(6) {
+	height: 41.5px;
+	border-top: 1.5px solid #d7d7d7;
+}
+
+.asc_btn {
+	width: 30px;
+	height: 25px;
+}
+
+.asc_btn:hover {
+	cursor: pointer;
+}
+
+select {
+	height: 23px;
+	width: 150px;
+	font-size: 12px;
+}
+
+.srch_name {
+	margin: 0px 10px 0px 20px;
+	font-weight: bold;
+}
+
+.srch_msg {
+	height: 20px;
+	width: 305px;
+	font-size: 12px;
+}
+/*---------  검색결과 : n건 --------- */
+.SearchResult { /* 영업기회 검색결과 */
+	width: 927px;
+	font-size: 11pt;
+	text-align: left;
+	margin-top: 30px;
+}
+/********** list_table **********/
+.list_table {
+	border-collapse: collapse;
+	background-color: #FFF;
+	width: 100%;
+	font-size: 10.5pt;
+	text-align: left;
+	margin: 10px 0px 40px 0px;
+}
+
+.list_table thead th {
+	height: 25px;
+	font-size: 10pt;
+	font-weight: bold;
+	/* border-top: 2px solid gray; */
+}
+
+.list_table thead tr:nth-child(1) {
+	border-top: 2px solid gray;
+}
+
+.list_table thead tr:nth-child(3) {
+	border-bottom: 1.5px solid gray;
+}
+
+.list_table thead tr {
+	border-bottom: none;
+}
+
+.list_table tbody td {
+	height: 30px;
+	font-size: 11pt;
+}
+
+/* 세번째 줄 마다 언더라인 */
+.thirdTr  {
+	border-bottom: 1.0px solid #d7d7d7;
+}
+/* 글번호 */
+.md_num{
+	text-align: center;
+}
+/* 상품명 */
+.md_name {
+	font-weight: 700;
+	font-size: 12pt;
+}
+.md_name:hover {
+	color: #4b94f2;
+	cursor: pointer;
+	text-decoration: underline;
+}
+/* 판매 가능 버튼 */
+.sales_psbl_btn {
+	display: inline-block;
+	vertical-align: top;
+	padding: 0px 10px;
+	min-width: 30px;
+	height: 30px;
+	margin-left: 10px;
+	line-height: 30px;
+	font-size: 10pt;
+	font-weight: bold;
+	text-align: center;
+	background-color: #4b94f2;
+	border-radius: 2px;
+	color: #f2f2f2;
+}
+/* .sales_psbl_btn:active {
+	background-color: #2e83f2;
+} */

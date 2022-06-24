@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="expnsRsltnadmnstr">
+	<select id="getExpnsCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM (  SELECT ROW_NUMBER() OVER(ORDER BY TO_CHAR(DATE_HR, 'YYYY-MM') DESC) AS RNUM
+		        FROM EXPNS_RSLTN INNER JOIN EMP
+		                                ON EXPNS_RSLTN.EMP_NUM = EMP.EMP_NUM
+		        WHERE 1 = 1
+		        <if test="searchTxt != null and searchTxt != ''">
+					AND EMP_NAME LIKE '%' || #{searchTxt} || '%'
+				</if>
+				<if test="searchMonth != null and searchMonth != ''">
+					AND TO_CHAR(DATE_HR, 'YYYY-MM') = #{searchMonth}	
+				</if>
+		        GROUP BY TO_CHAR(DATE_HR, 'YYYY-MM'), EMP_NAME )
+	</select>
+	
+	<select id="getExpnsList" resultType="hashmap" parameterType="hashmap">
+		SELECT S.DATE_MON, S.EMP_NAME, S.EMP_NUM, TO_CHAR(S.CRP, '999,999,999,999') AS CRP, TO_CHAR(S.IND, '999,999,999,999') AS IND, TO_CHAR(S.TOTAL, '999,999,999,999') AS TOTAL
+		FROM (  SELECT TO_CHAR(DATE_HR, 'YYYY-MM') AS DATE_MON, EMP_NAME, E.EMP_NUM, SUM(DECODE(ER.EXPNS_TYPE, '법인', AMNT)) AS CRP, 
+		     		   SUM(DECODE(EXPNS_TYPE, '개인', AMNT)) AS IND, SUM(AMNT) AS TOTAL, 
+		     		   ROW_NUMBER() OVER(ORDER BY TO_CHAR(DATE_HR, 'YYYY-MM') DESC) AS RNUM
+				FROM EXPNS_RSLTN ER INNER JOIN EMP E
+		                    		        ON ER.EMP_NUM = E.EMP_NUM
+				WHERE 1 = 1
+				<if test="searchTxt != null and searchTxt != ''">
+					AND EMP_NAME LIKE '%' || #{searchTxt} || '%'
+				</if>
+				<if test="searchMonth != null and searchMonth != ''">
+					AND TO_CHAR(DATE_HR, 'YYYY-MM') = #{searchMonth}	
+				</if>
+				GROUP BY TO_CHAR(DATE_HR, 'YYYY-MM'), EMP_NAME, E.EMP_NUM
+			 ) S
+		WHERE S.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="getExpnsEmpMnthlyData" resultType="hashmap" parameterType="hashmap">
+		SELECT TO_CHAR(SUM(DECODE(EXPNS_TYPE, '법인', AMNT)), '999,999,999,999') AS CRP, TO_CHAR(SUM(DECODE(EXPNS_TYPE, '개인', AMNT)), '999,999,999,999') AS IND, TO_CHAR(SUM(AMNT), '999,999,999,999') AS TOTAL
+		FROM EXPNS_RSLTN ER INNER JOIN EMP E
+		                            ON ER.EMP_NUM = E.EMP_NUM
+		WHERE TO_CHAR(DATE_HR, 'YYYY-MM') = #{mon}
+		AND E.EMP_NUM = #{empNum}
+	</select>
+	
+	<select id="getExpnsEmpMnthlyCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM EXPNS_RSLTN
+		WHERE TO_CHAR(DATE_HR, 'YYYY-MM') = #{mon}
+		AND EMP_NUM = #{empNum}
+	</select>
+	
+	<select id="getExpnsEmpMnthlyList" resultType="hashmap" parameterType="hashmap">
+		SELECT EXPNS_DATE, CHIT_NUM, EXPNS_TYPE, TO_CHAR(AMNT, '999,999,999,999') AS AMNT, EXPNS, ACNT_NAME
+		FROM (  SELECT TO_CHAR(ER.DATE_HR, 'YYYY-MM-DD') AS EXPNS_DATE, ER.CHIT_NUM, ER.EXPNS_TYPE, ER.AMNT,
+					   ER.EXPNS, AC.ACNT_NAME, ROW_NUMBER() OVER(ORDER BY TO_CHAR(ER.DATE_HR, 'YYYY-MM-DD') DESC) AS RNUM
+				FROM EXPNS_RSLTN ER INNER JOIN ACNT_CODE AC
+				                            ON ER.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+				                           AND AC.MAIN_CTGR_ACNT_CODE = 1
+				                           AND AC.DEL = 0
+				WHERE ER.EMP_NUM = #{empNum}
+				AND TO_CHAR(ER.DATE_HR, 'YYYY-MM') = #{mon}  ) E
+		WHERE E.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="expnsRsltnadmnstrDtl" resultType="hashmap" parameterType="hashmap">
+		SELECT E.EMP_NAME, TO_CHAR(ER.RGSTRTN_DATE_HR, 'YYYY-MM-DD') AS RGS_DATE, ER.CHIT_NUM, AC.ACNT_NAME, ER.EXPNS, TO_CHAR(ER.AMNT, '999,999,999,999') AS AMNT,
+		       TO_CHAR(ER.DATE_HR, 'YYYY-MM-DD') AS DATE_D, ER.EXPNS_TYPE, ER.RMRKS, ER.ATT_FILE
+		FROM EXPNS_RSLTN ER INNER JOIN EMP E
+		                            ON ER.EMP_NUM = E.EMP_NUM
+		                    INNER JOIN ACNT_CODE AC
+		                            ON ER.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+		                           AND AC.MAIN_CTGR_ACNT_CODE = 1
+		WHERE CHIT_NUM = #{sendChitNum}
+	</select>
+
+</mapper>

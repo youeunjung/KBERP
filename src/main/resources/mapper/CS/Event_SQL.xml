@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ev">
+
+
+	
+	<select id="getEndEventCnt" resultType="Integer" parameterType="hashmap">
+		<![CDATA[
+			SELECT COUNT(*) AS CNT
+			FROM EVENT
+			WHERE EVENT.END_DATE < SYSDATE
+		]]> 		
+	</select>
+	
+	<select id="getEndEventList" resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT EV.EVENT_NUM, EV.EMP_NUM, EV.EMP_NAME, EV.EVENT_TITLE, EV.WRITE_DATE, EV.EVENT_HITS, EV.START_DATE, EV.END_DATE
+	        FROM (  SELECT EV.EVENT_NUM, EV.EMP_NUM, E.EMP_NAME, EV.EVENT_TITLE,
+	                      TO_CHAR(EV.WRITE_DATE, 'YY-MM-DD') AS WRITE_DATE, EV.EVENT_HITS,
+	                      TO_CHAR(EV.START_DATE, 'YY-MM-DD') AS START_DATE,
+	                      TO_CHAR(EV.END_DATE, 'YY-MM-DD') AS END_DATE,
+	                      ROW_NUMBER() OVER(ORDER BY EV.EVENT_NUM DESC) AS RNUM
+	                FROM EVENT EV LEFT OUTER JOIN EMP E
+	                                                ON EV.EMP_NUM=E.EMP_NUM
+	                WHERE EV.END_DATE < SYSDATE
+	                ) EV
+	        WHERE EV.RNUM BETWEEN #{startCount} AND #{endCount}
+		]]>
+	  
+	</select>
+	
+
+	<select id="getEventList" resultType="hashmap" parameterType="hashmap">
+	  SELECT EV.EVENT_NUM, EV.EMP_NUM, EV.EMP_NAME, EV.EVENT_TITLE, EV.WRITE_DATE, EV.EVENT_HITS, EV.START_DATE, EV.END_DATE
+        FROM (  SELECT EV.EVENT_NUM, EV.EMP_NUM, E.EMP_NAME, EV.EVENT_TITLE,
+                      TO_CHAR(EV.WRITE_DATE, 'YY-MM-DD') AS WRITE_DATE, EV.EVENT_HITS,
+                      TO_CHAR(EV.START_DATE, 'YY-MM-DD') AS START_DATE,
+                      TO_CHAR(EV.END_DATE, 'YY-MM-DD') AS END_DATE,
+                      ROW_NUMBER() OVER(ORDER BY EV.EVENT_NUM DESC) AS RNUM
+                FROM EVENT EV LEFT OUTER JOIN EMP E
+                                                ON EV.EMP_NUM=E.EMP_NUM
+                WHERE EV.END_DATE >= SYSDATE
+                ) EV
+        WHERE EV.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="getEvent" resultType="hashmap" parameterType="hashmap">
+		SELECT EV.EVENT_NUM, EV.EMP_NUM, EV.event_title, EV.event_cont, EV.write_date, 
+		TO_CHAR(EV.START_DATE, 'YYYY-MM-DD') AS START_DATE,
+		TO_CHAR(EV.END_DATE, 'YYYY-MM-DD') AS END_DATE,
+		EV.event_hits, EV.del_check, EM.EMP_NAME AS EMP_NAME, EV.START_DATE, EV.END_DATE
+		FROM EVENT EV LEFT OUTER JOIN EMP EM ON EV.EMP_NUM = EM.EMP_NUM
+		WHERE EV.EVENT_NUM = #{no}
+	</select>
+	
+	<select id="getEventCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM EVENT
+		WHERE EVENT.END_DATE >= SYSDATE
+	</select>
+	
+	<!-- 점심이후 수정 -->
+	<insert id="EventAdd" parameterType="hashmap">
+		INSERT INTO EVENT(EVENT.EVENT_NUM, EVENT.EMP_NUM, EVENT.EVENT_TITLE, EVENT.EVENT_CONT, EVENT.START_DATE, EVENT.END_DATE)
+		VALUES(EVENT_SEQ.NEXTVAL, #{emp_num}, #{title}, #{cont}, 
+		to_date(#{start_date}, 'YYYY-MM-DD'), TO_DATE(#{end_date}, 'YYYY-MM-DD'))
+	</insert>
+	
+	<update id="EventUpdate" parameterType="hashmap">
+		UPDATE EVENT SET EMP_NUM = #{emp_num},
+	                 EVENT_TITLE = #{title},
+	                 EVENT_CONT= #{cont},
+	                 START_DATE= TO_DATE(#{start_date}, 'YYYY-MM-DD'),
+	                 END_DATE= TO_DATE(#{end_date}, 'YYYY-MM-DD')
+		WHERE EVENT_NUM = #{no}
+	</update>
+	
+	<delete id="EventDelete" parameterType="hashmap">
+		DELETE FROM EVENT
+		WHERE EVENT.EVENT_NUM = #{no}
+	</delete>
+	
+	<select id="getEventCmntList" resultType="hashmap" parameterType="hashmap">
+		SELECT CMNT_NUM, CLNT_NUM, EVENT_NUM, EMP_NUM, CMNT_CONT, DEL_CHECK
+		FROM EVENT_CMNT
+		WHERE EVENT_NUM = #{no}
+	</select>
+	
+	
+	<select id="getEventCmntCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM EVENT_CMNT 
+	</select>
+	
+	<select id="getEventCmnt" resultType="hashmap" parameterType="hashmap">
+		SELECT CMNT_NUM, CLNT_NUM, EVENT_NUM, EMP.EMP_NUM, CMNT_CONT, DEL_CHECK, EMP.EMP_NAME AS WRITER_NAME
+		FROM EVENT_CMNT, EMP
+		WHERE EVENT_CMNT.EMP_NUM = EMP.EMP_NUM
+		AND EVENT_NUM = #{no}
+	</select>
+	
+	<insert id="EventCmntAdd" parameterType="hashmap">
+		INSERT INTO EVENT_CMNT(CMNT_NUM, EVENT_NUM, EMP_NUM, CMNT_CONT) 
+		VALUES(#{cmnt_num}, #{no}, #{emp_num}, #{cmnt_cont})
+	</insert>
+	
+	<update id="updateHit" parameterType="hashmap">
+		UPDATE EVENT SET  EVENT_HITS= EVENT_HITS + 1
+		WHERE EVENT_NUM = #{no}
+	</update> 
+	
+	
+</mapper>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CC">
+
+<!-- 고객정보 팝업 -->
+<select id="getCallCenterClnt" parameterType="hashmap" resultType="hashmap">
+SELECT CLNT_NUM, CLNT_NAME, CLNT_GRADE, PHONE_NUM_1, PHONE_NUM_2, ADRS, DTL_ADRS
+FROM INDVDL_CLNT
+WHERE 1=1
+<if test="searchTxt != null and searchTxt != ''"> <!-- 검색어가 있다면 --> 
+	<choose>
+		<when test="clnt_slct == 0">
+			AND CLNT_NAME LIKE '%' || #{searchTxt} || '%'
+		</when>
+		<when test="clnt_slct == 1">
+			AND CLNT_GRADE LIKE '%' || #{searchTxt} || '%'
+		</when>
+		<when test="clnt_slct == 2">
+			AND PHONE_NUM_1 LIKE '%' || #{searchTxt} || '%'
+		</when>
+	</choose>
+</if>
+ORDER BY CLNT_NAME ASC
+</select>
+
+<!-- 상담이력 -->
+<select id="getCallCenterCnsl" parameterType="hashmap" resultType="hashmap">
+SELECT N.CNSL_NUM, I.CLNT_NUM, I.CLNT_NAME, I.PHONE_NUM_1, TO_CHAR(N.WRITE_DATE, 'YYYY-MM-DD') AS WRITE_DATE, E.EMP_NAME ,
+	   CASE WHEN N.CNSL_TYPE_NUM = 0 THEN '민원'
+	   		WHEN N.CNSL_TYPE_NUM = 1 THEN '상담'
+	   		WHEN N.CNSL_TYPE_NUM = 2 THEN '기타'
+	   END CNSL_TYPE_NUM, 
+       CASE WHEN N.CNSL_RSLT_NUM = 0 THEN '완료'
+            WHEN N.CNSL_RSLT_NUM = 1 THEN '미처리'
+            WHEN N.CNSL_RSLT_NUM = 2 THEN '예약'
+            WHEN N.CNSL_RSLT_NUM = 3 THEN '이관'
+       END CNSL_RSLT_NUM
+FROM(SELECT  CLNT_NUM, CLNT_NAME, CLNT_GRADE, PHONE_NUM_1
+     FROM INDVDL_CLNT
+     )I INNER JOIN CNSL_NOTE N
+                ON I.CLNT_NUM = N.CLNT_NUM
+        INNER JOIN EMP E
+                ON N.EMP_NUM = E.EMP_NUM
+WHERE I.CLNT_NUM = #{clnt_num}
+ORDER BY WRITE_DATE DESC
+</select>
+
+<!-- [이력]상담노트 -->
+<select id="getRcrdCnslNote" parameterType="hashmap" resultType="hashmap">
+SELECT CNSL_NUM, CLNT_NUM, EMP_NUM, TO_CHAR(WRITE_DATE, 'YYYY-MM-DD') AS WRITE_DATE,
+	   CASE WHEN CNSL_TYPE_NUM = 0 THEN '민원'
+	   		WHEN CNSL_TYPE_NUM = 1 THEN '상담'
+	   		WHEN CNSL_TYPE_NUM = 2 THEN '기타'
+	   END CNSL_TYPE_NUM, CONT, 
+	   CASE WHEN CNSL_RSLT_NUM = 0 THEN '완료'
+            WHEN CNSL_RSLT_NUM = 1 THEN '미처리'
+            WHEN CNSL_RSLT_NUM = 2 THEN '예약'
+            WHEN CNSL_RSLT_NUM = 3 THEN '이관'
+       END CNSL_RSLT_NUM
+FROM CNSL_NOTE
+WHERE CNSL_NUM = #{cnsl_num}
+</select>
+
+<!-- 고객정보 저장 -->
+<insert id="clntSave" parameterType="hashmap">
+INSERT INTO INDVDL_CLNT(CLNT_NUM, CLNT_NAME, CLNT_GRADE, PHONE_NUM_1, PHONE_NUM_2, ZIP_CODE, ADRS, DTL_ADRS)
+VALUES (#{clntSeq}, #{clnt_name}, #{clnt_grade}, #{phon_num_1}, #{phon_num_2}, #{zip_code}, #{adrs}, #{dtl_adrs})
+</insert>
+<!-- 고객정보 수정 -->
+<update id="clntUpdate" parameterType="hashmap">
+UPDATE INDVDL_CLNT SET CLNT_NAME = #{clnt_name},
+                       CLNT_GRADE = #{clnt_grade},
+                       PHONE_NUM_1 = #{phon_num_1},
+                       PHONE_NUM_2 = #{phon_num_2},
+                       ZIP_CODE = #{zip_code},
+                       ADRS = #{adrs},
+                       DTL_ADRS = #{dtl_adrs}
+WHERE CLNT_NUM = #{clnt_num}
+</update>
+
+<!-- 상담노트 저장 -->
+<insert id="noteSave" parameterType="hashmap">
+INSERT INTO CNSL_NOTE(CNSL_NUM, CLNT_NUM, EMP_NUM, CNSL_TYPE_NUM, CONT, CNSL_RSLT_NUM, WRITE_DATE)
+VALUES (CNSL_NOTE_SEQ.NEXTVAL, #{clnt_num}, #{emp_num}, #{cnsl_type_num}, #{cont}, #{cnsl_rslt_num}, #{write_date})
+</insert>
+
+<!-- 고객정보 단건 -->
+<select id="getCallCenterC" parameterType="hashmap" resultType="hashmap">
+SELECT CLNT_NUM, CLNT_NAME, CLNT_GRADE, PHONE_NUM_1, PHONE_NUM_2, ZIP_CODE, ADRS, DTL_ADRS
+FROM INDVDL_CLNT
+WHERE CLNT_NUM = #{clnt_num}
+</select>
+
+<!-- 신규고객 등록 팝업에서 고객정보로 데이터 전달 -->
+<select id="clntSeq" resultType="String">
+SELECT INDVDL_CLNT_SEQ.NEXTVAL
+FROM DUAL
+</select>
+
+<select id="clntParam" parameterType="hashmap" resultType="hashmap">
+SELECT CLNT_NUM, CLNT_NAME, CLNT_GRADE, PHONE_NUM_1, PHONE_NUM_2, ZIP_CODE, ADRS, DTL_ADRS
+FROM INDVDL_CLNT
+WHERE CLNT_NUM = #{clntSeq}
+</select>
+
+<!-- 고객정보 수정 팝업에서 고객정보로 데이터 전달 -->
+<select id="clntUpSeq" resultType="String">
+SELECT INDVDL_CLNT_SEQ.NEXTVAL
+FROM DUAL
+</select>
+
+<select id="clntUpParam" parameterType="hashmap" resultType="hashmap">
+SELECT CLNT_NUM, CLNT_NAME, CLNT_GRADE, PHONE_NUM_1, PHONE_NUM_2, ZIP_CODE, ADRS, DTL_ADRS
+FROM INDVDL_CLNT
+WHERE CLNT_NUM = #{clnt_num}
+</select>
+
+<!-- 대응가이드 파트 -->
+<!-- 총 게시글 수 -->
+<select id="getRspndCnt" resultType="Integer">
+SELECT COUNT(*) CNT
+FROM RSPND_GUIDE
+WHERE DEL_CHECK = 1 AND CTGRY_NUM = 2
+</select>
+
+<select id="getRspndList" parameterType="hashmap" resultType="hashmap">
+SELECT T.GUIDE_NUM, T.CTGRY_NAME, T.EMP_NAME, T.CLNT_TYPE, T.TYPE_CASE, T.RSPNS_PLAN, T.WRITE_DATE
+FROM( SELECT R.GUIDE_NUM, C.CTGRY_NAME, E.EMP_NAME, R.CLNT_TYPE, R.TYPE_CASE, R.RSPNS_PLAN, 
+				TO_CHAR(R.WRITE_DATE, 'YYYY-MM-DD')AS WRITE_DATE, 
+				ROW_NUMBER() OVER(ORDER BY GUIDE_NUM DESC) AS RNUM
+	  FROM( SELECT CTGRY_NUM, CTGRY_NAME
+		    FROM RSPND_GUIDE_CTGRY)C INNER JOIN (SELECT GUIDE_NUM, EMP_NUM, CTGRY_NUM, CLNT_TYPE, TYPE_CASE, RSPNS_PLAN, WRITE_DATE, DEL_CHECK
+		                                         FROM RSPND_GUIDE
+		                                         WHERE DEL_CHECK = 1 )R
+		                                     ON C.CTGRY_NUM = R.CTGRY_NUM
+		                             INNER JOIN EMP E
+		                                     ON R.EMP_NUM = E.EMP_NUM
+			WHERE R.CTGRY_NUM = 2 )T
+WHERE T.RNUM BETWEEN #{startCnt} AND #{endCnt}
+</select>
+
+<insert id="rspndAdd" parameterType="hashmap">
+INSERT INTO RSPND_GUIDE(GUIDE_NUM, CTGRY_NUM, EMP_NUM, CLNT_TYPE, TYPE_CASE, RSPNS_PLAN)
+VALUES(RSPND_GUIDE_SEQ.NEXTVAL, 2, #{emp_num}, #{clnt_type}, #{type_case}, #{rspns_plan})
+</insert>
+
+<update id="rspndUp" parameterType="hashmap">
+UPDATE RSPND_GUIDE SET CLNT_TYPE = #{clnt_type},
+                       TYPE_CASE = #{type_case},
+                       RSPNS_PLAN = #{rspns_plan}
+WHERE GUIDE_NUM = #{guide_num}
+</update>
+
+<update id="rspndDel" parameterType="hashmap">
+UPDATE RSPND_GUIDE SET DEL_CHECK = 0
+WHERE GUIDE_NUM = #{guide_num}
+</update>
+</mapper>

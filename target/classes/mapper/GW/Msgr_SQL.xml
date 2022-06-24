@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="msgr">
+
+<!-- 채팅방 개수 -->
+	<select id = "chatCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+	    FROM MSGR M INNER JOIN MSGR_HEAD_COUNT MHC
+	      				ON M.CHAT_NUM = MHC.CHAT_NUM
+		WHERE M.EMP_NUM = MHC.EMP_NUM
+		AND  M.EMP_NUM = #{sEmpNum}
+	</select>
+
+<!-- 채팅방 삽입 -->
+	<insert id = "insertChat" parameterType= "hashmap">
+		INSERT INTO MSGR(CHAT_NUM, EMP_NUM)
+		VALUES(#{chatsq}, #{sEmpNum})
+	</insert>
+	
+<!-- 채팅방 참여인원 -->	
+	<insert id="insertChatHead" parameterType= "hashmap">
+		INSERT INTO MSGR_HEAD_COUNT (CHAT_NUM, EMP_NUM)
+		VALUES (#{chatsq}, #{num})
+	</insert>
+		
+<!-- 채팅 삽입 -->		
+	<insert id = "insertCont" parameterType= "hashmap">
+		INSERT INTO MSGR_CONT(CONT_NUM, CHAT_NUM, EMP_NUM, CONT)
+		VALUES (MSGR_CONT_SEQ.NEXTVAL, #{chatNum}, #{sEmpNum}, #{cont})
+	</insert>
+		
+<!-- 채팅방 시퀀스 -->		
+	<select id="chatSeq" resultType="String">
+		SELECT MSGR_CHAT_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+<!-- 채팅 시퀀스 -->	
+	<select id="contSeq" resultType="String">
+		SELECT MSGR_CONT_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+<!-- 채팅방 리스트 -->	
+	<select id = "DrawRoom" parameterType = "hashmap" resultType="hashmap">
+		SELECT M.CHAT_NUM, MAX(SUBSTR(SYS_CONNECT_BY_PATH(M.EMP_NAME, ','), 2)) AS EMP_NAME,
+		       M.CNT, M.CONT_NUM, M.CONT, M.ATCHD_FILE, M.LAST_CHECK <!-- 페이징구역 -->
+		FROM (SELECT MHC.CHAT_NUM, E.EMP_NAME || ' ' || R.RANK_NAME || '(' || D.DEPT_NAME || ')' AS EMP_NAME, 
+					 MC.CNT, MCON.CONT_NUM, MCON.CONT, MCON.ATCHD_FILE,
+				     CASE WHEN MCON.CONT_NUM > MHC.LAST_VIEW_NUM
+				          THEN 1
+				          ELSE 0
+				     END AS LAST_CHECK,
+				     ROW_NUMBER() OVER(PARTITION BY MHC.CHAT_NUM ORDER BY MHC.JOIN_DT ASC) AS RNUM
+			  FROM MSGR_HEAD_COUNT MHC INNER JOIN EMP E 
+			                                   ON MHC.EMP_NUM = E.EMP_NUM
+			                           INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+			                                              ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+			                                       FROM APNTM
+			                                       WHERE STS_NUM = 1) A
+			                                   ON E.EMP_NUM = A.EMP_NUM
+			                                  AND A.RNUM = 1
+			                           INNER JOIN DEPT D
+			                                   ON A.DEPT_NUM = D.DEPT_NUM
+			                           INNER JOIN RANK R
+			                                   ON A.RANK_NUM = R.RANK_NUM
+			                           INNER JOIN (SELECT CHAT_NUM
+			                                       FROM MSGR_HEAD_COUNT
+			                                       WHERE EMP_NUM = #{sEmpNum}
+			                                       AND DEL_CHECK = 0) ME
+			                                   ON MHC.CHAT_NUM = ME.CHAT_NUM
+			                           INNER JOIN (SELECT CHAT_NUM, COUNT(*) AS CNT
+			                                       FROM MSGR_HEAD_COUNT
+			                                       WHERE DEL_CHECK = 0
+			                                       GROUP BY CHAT_NUM) MC
+			                                   ON MHC.CHAT_NUM = MC.CHAT_NUM
+			                           LEFT OUTER JOIN (SELECT CONT_NUM, CHAT_NUM, CONT, ATCHD_FILE, ROW_NUMBER() OVER(PARTITION BY CHAT_NUM ORDER BY CONT_NUM DESC) AS RNUM
+			                                            FROM MSGR_CONT) MCON
+			                                        ON MHC.CHAT_NUM = MCON.CHAT_NUM
+			                                       AND MCON.RNUM = 1
+				WHERE MHC.EMP_NUM != #{sEmpNum}) M
+		START WITH M.RNUM = 1
+		CONNECT BY PRIOR M.RNUM = M.RNUM - 1 AND PRIOR M.CHAT_NUM = M.CHAT_NUM
+		GROUP BY M.CHAT_NUM, M.CONT_NUM, M.CONT, M.ATCHD_FILE, M.LAST_CHECK, M.CNT
+		ORDER BY M.CONT_NUM DESC, M.CHAT_NUM DESC
+	</select>
+
+<!-- 사원리스트 -->	
+	<select id = "addListChat" parameterType = "hashmap" resultType="hashmap">
+		SELECT EMP_NAME, DEPT_NAME, RANK_NAME, EMP_NUM
+		FROM (SELECT E.EMP_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, ROW_NUMBER() OVER(ORDER BY E.EMP_NUM DESC) AS RNUM
+		FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                      ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                               FROM APNTM
+                               WHERE STS_NUM = 1) A
+		                   ON E.EMP_NUM = A.EMP_NUM
+                          AND A.RNUM = 1
+		                  AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+		           INNER JOIN DEPT D
+		                   ON A.DEPT_NUM = D.DEPT_NUM
+		           INNER JOIN RANK R
+		                   ON A.RANK_NUM = R.RANK_NUM
+		  )
+	WHERE EMP_NUM != #{sEmpNum}
+	</select>
+	
+<!-- 아이디별 채팅방 -->
+	<!-- <select id = "idChatRoom" parameterType = "hashmap" resultType="hashmap">
+		SELECT DISTINCT CHAT_NUM, EMP_NUM
+		FROM (SELECT M.CHAT_NUM, M.EMP_NUM
+	      	  FROM MSGR M INNER JOIN MSGR_CONT MC
+	                		ON M.EMP_NUM = MC.EMP_NUM) A
+		WHERE CHAT_NUM = #{sEmpNum}
+	</select> -->
+	
+<!-- 채팅방 인원 추가 -->	
+	<update id="joinChat" parameterType="hashmap">
+		UPDATE MSGR SET EMP_NUM = #{empNum},
+	                 RGSTRTN_DT = #{rgdt}
+		WHERE CHAT_NUM = #{chatNum}
+	</update>
+	
+<!-- 마지막 채팅번호 -->	
+	<select id="getMaxNo" resultType="Integer">
+		SELECT NVL(MAX(CONT_NUM), 0) AS MAXNO
+		FROM MSGR_CONT
+	</select>
+	
+	
+<!-- lastChatNo 기준으로 이전 채팅 읽어오기, 이후 채팅 불러오기 -->	
+	<select id="getCont" parameterType="hashmap" resultType="hashmap">
+		SELECT MC.CHAT_NUM, MC.CONT_NUM, MC.EMP_NUM, MC.CONT, MC.RGSTRTN_DT, R.RANK_NAME, E.EMP_NAME, D.DEPT_NAME
+		FROM (SELECT CHAT_NUM, CONT_NUM, EMP_NUM, CONT, TO_CHAR(RGSTRTN_DT, 'MM/DD HH24:MI') AS RGSTRTN_DT
+		        FROM MSGR_CONT
+		        WHERE CONT_NUM > #{lastContNo}
+		        AND CHAT_NUM = #{chatNum}
+		        ORDER BY CONT_NUM ASC) MC INNER JOIN EMP E
+		                                    ON MC.EMP_NUM = E.EMP_NUM
+		                                  INNER JOIN APNTM A
+					                        ON E.EMP_NUM = A.EMP_NUM
+		                                  INNER JOIN DEPT D
+					                        ON A.DEPT_NUM = D.DEPT_NUM
+		                                  INNER JOIN RANK R
+					                        ON A.RANK_NUM = R.RANK_NUM
+	</select>
+	
+<!--처음입장할땐 등록이후의 채팅을가져와야하고
+	추가 글을 가져올때 -->	
+	
+
+
+<select id="getContList" parameterType="hashmap" resultType="hashmap">
+	SELECT CONT, RGSTRTN_DT, EMP_NAME, DEPT_NAME, RANK_NAME, EMP_NUM 
+	FROM (SELECT MC.CHAT_NUM, CONT_NUM, MC.CONT, E.EMP_NUM, JOIN_DT, TO_CHAR(MC.RGSTRTN_DT, 'MM/DD HH24:MI') AS RGSTRTN_DT, MHC.LAST_VIEW_NUM,ROW_NUMBER()OVER(ORDER BY CONT_NUM ASC) AS RNUM, 
+                EMP_NAME, DEPT_NAME, RANK_NAME
+	FROM MSGR M INNER JOIN MSGR_CONT MC
+	                            	ON M.CHAT_NUM = MC.CHAT_NUM
+	                            INNER JOIN MSGR_HEAD_COUNT MHC
+	                            	ON MC.CHAT_NUM = MHC.CHAT_NUM
+	                            INNER JOIN EMP E
+	                            	ON MC.EMP_NUM = E.EMP_NUM
+	                            INNER JOIN APNTM A
+                               		ON E.EMP_NUM = A.EMP_NUM
+                            	INNER JOIN DEPT D
+                                	ON A.DEPT_NUM = D.DEPT_NUM
+                            	INNER JOIN RANK R
+                                	ON A.RANK_NUM = R.RANK_NUM
+	WHERE MHC.EMP_NUM = #{sEmpNum} AND MC.RGSTRTN_DT > JOIN_DT AND MC.CHAT_NUM = #{chatNum} )
+	ORDER BY RNUM
+</select>
+
+
+
+
+
+
+
+	
+</mapper>

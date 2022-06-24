@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="note">
+	<!-- 보낸쪽지함 목록 -->
+	<select id="sentNoteList" resultType="hashmap" parameterType="hashmap">
+		SELECT C.NOTE_NUM, C.ATT_FILE, E.EMP_NAME, C.NOTE_CNT, C.WRTNG_DATE
+		FROM EMP E INNER JOIN (SELECT N.NOTE_NUM, N.SNDR_EMP_NUM, NRE.RCPNT_EMP_NUM, N.NOTE_CNT,
+									  TO_CHAR(N.WRTNG_DATE,'YYYY-MM-DD') AS WRTNG_DATE, N.DEL_CHECK,
+									  N.ATT_FILE, ROW_NUMBER() OVER(ORDER BY N.NOTE_NUM DESC) AS RNUM
+		                       FROM NOTE N INNER JOIN NOTE_RCPNT_EMP NRE
+		                                           ON N.NOTE_NUM = NRE.NOTE_NUM
+		                                   INNER JOIN EMP E
+		                                           ON NRE.RCPNT_EMP_NUM = E.EMP_NUM
+		                       WHERE N.DEL_CHECK = 0 AND N.SNDR_EMP_NUM = #{sEmpNum}
+						       <if test="searchTxt != null and searchTxt != ''">
+							  	   <choose>
+								      <when test="srch_sel == 0">
+								    	  AND N.NOTE_CNT LIKE '%' || #{searchTxt} || '%'
+								      </when>
+								      <when test="srch_sel == 1">
+								    	  AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+								      </when>
+							       </choose>
+							   </if> ) C
+		                   ON E.EMP_NUM = C.RCPNT_EMP_NUM
+		WHERE C.RNUM BETWEEN #{startCount} AND #{endCount} AND C.SNDR_EMP_NUM = #{sEmpNum}
+		ORDER BY C.NOTE_NUM DESC
+	</select>
+	
+	<!-- 받은쪽지함 목록 -->
+	<select id="rcvdNoteList" resultType="hashmap" parameterType="hashmap">
+		SELECT C.NOTE_NUM, C.ATT_FILE, E.EMP_NAME, C.NOTE_CNT, C.VIEW_DATE, C.READ_CHECK
+		FROM EMP E INNER JOIN (SELECT NRE.NOTE_NUM, NRE.RCPNT_EMP_NUM, N.SNDR_EMP_NUM, NRE.NOTE_CNT, 
+									  TO_CHAR(NRE.VIEW_DATE,'YYYY-MM-DD') AS VIEW_DATE, NRE.DEL_CHECK, NRE.READ_CHECK,
+									  NRE.ATT_FILE, ROW_NUMBER() OVER(ORDER BY NRE.NOTE_NUM DESC) AS RNUM
+		                       FROM NOTE_RCPNT_EMP NRE INNER JOIN NOTE N
+															   ON NRE.NOTE_NUM = N.NOTE_NUM
+													   INNER JOIN EMP E
+						                               		   ON N.SNDR_EMP_NUM = E.EMP_NUM
+		                       WHERE NRE.DEL_CHECK = 0 AND NRE.RCPNT_EMP_NUM = #{sEmpNum}
+						       <if test="searchTxt != null and searchTxt != ''">
+							  	   <choose>
+								      <when test="srch_sel == 0">
+								    	  AND NRE.NOTE_CNT LIKE '%' || #{searchTxt} || '%'
+								      </when>
+								      <when test="srch_sel == 1">
+								    	  AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+								      </when>
+							       </choose>
+							   </if> ) C
+		                   ON E.EMP_NUM = C.SNDR_EMP_NUM
+		WHERE C.RNUM BETWEEN #{startCount} AND #{endCount} AND C.RCPNT_EMP_NUM = #{sEmpNum}
+		ORDER BY C.NOTE_NUM DESC
+	</select>
+	
+	<!-- 보낸쪽지함 목록 개수를 이용한 페이지 이동 -->
+	<select id="sentNoteIntData" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM NOTE N INNER JOIN NOTE_RCPNT_EMP NRE
+                            ON N.NOTE_NUM = NRE.NOTE_NUM
+                    INNER JOIN EMP E
+                    		ON NRE.RCPNT_EMP_NUM = E.EMP_NUM 
+		WHERE N.DEL_CHECK = 0 AND N.SNDR_EMP_NUM = #{sEmpNum}
+		<if test="searchTxt != null and searchTxt != ''">
+			 <choose>
+				 <when test="srch_sel == 0">
+				 	 AND N.NOTE_CNT LIKE '%' || #{searchTxt} || '%'
+				 </when>
+				 <when test="srch_sel == 1">
+					 AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+				 </when>
+			 </choose>
+		</if>
+	</select>
+	
+	<!-- 받은쪽지함 목록 개수를 이용한 페이지 이동 -->
+	<select id="rcvdNoteIntData" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM NOTE_RCPNT_EMP NRE INNER JOIN NOTE N
+										ON NRE.NOTE_NUM = N.NOTE_NUM
+								INNER JOIN EMP E
+                               		    ON N.SNDR_EMP_NUM = E.EMP_NUM
+		WHERE NRE.DEL_CHECK = 0 AND NRE.RCPNT_EMP_NUM = #{sEmpNum}
+		<if test="searchTxt != null and searchTxt != ''">
+			 <choose>
+				 <when test="srch_sel == 0">
+				 	 AND NRE.NOTE_CNT LIKE '%' || #{searchTxt} || '%'
+				 </when>
+				 <when test="srch_sel == 1">
+					 AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+				 </when>
+			 </choose>
+		</if>
+	</select>
+	
+	<!-- 보낸쪽지 상세보기 -->
+	<select id="sentNoteView" resultType="hashmap" parameterType="hashmap">
+		SELECT C.NOTE_NUM, C.ATT_FILE, E.EMP_NAME, C.NOTE_CNT, C.WRTNG_DATE
+		FROM EMP E INNER JOIN ( SELECT N.NOTE_NUM, NRE.RCPNT_EMP_NUM, N.NOTE_CNT, N.ATT_FILE,
+		                               TO_CHAR(N.WRTNG_DATE,'YYYY-MM-DD HH24:MI:SS') AS WRTNG_DATE, N.DEL_CHECK
+		                        FROM NOTE N INNER JOIN EMP E
+		                                            ON N.SNDR_EMP_NUM = E.EMP_NUM
+		                                    INNER JOIN NOTE_RCPNT_EMP NRE
+		                                            ON N.NOTE_NUM = NRE.NOTE_NUM ) C
+		                   ON E.EMP_NUM = C.RCPNT_EMP_NUM
+		WHERE NOTE_NUM = #{no}
+	</select>
+	
+	<!-- 받은쪽지 상세보기 -->
+	<select id="rcvdNoteView" resultType="hashmap" parameterType="hashmap">
+		SELECT C.NOTE_NUM, C.ATT_FILE, E.EMP_NAME, C.NOTE_CNT, C.VIEW_DATE, C.SNDR_EMP_NUM, C.READ_CHECK
+		FROM EMP E INNER JOIN ( SELECT NRE.NOTE_NUM, N.SNDR_EMP_NUM, NRE.NOTE_CNT, NRE.ATT_FILE, NRE.READ_CHECK,
+                                       TO_CHAR(NRE.VIEW_DATE,'YYYY-MM-DD HH24:MI:SS') AS VIEW_DATE, NRE.DEL_CHECK
+		                		FROM NOTE_RCPNT_EMP NRE INNER JOIN EMP E
+                                                  		        ON NRE.RCPNT_EMP_NUM = E.EMP_NUM
+                                               		    INNER JOIN NOTE N
+                                                  		        ON NRE.NOTE_NUM = N.NOTE_NUM ) C
+                   		   ON E.EMP_NUM = C.SNDR_EMP_NUM 
+		WHERE NOTE_NUM = #{no}
+	</select>
+	
+	<!-- 사원리스트 -->	
+	<select id = "NoteOrgnztChart" parameterType = "hashmap" resultType="hashmap">
+	<!-- SELECT *
+	FROM (SELECT E.EMP_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME
+		  FROM  EMP E INNER JOIN APNTM A
+			                  ON E.EMP_NUM = A.EMP_NUM
+			          INNER JOIN DEPT D
+			                  ON A.DEPT_NUM = D.DEPT_NUM
+			          INNER JOIN RANK R
+			                  ON A.RANK_NUM = R.RANK_NUM )
+	WHERE EMP_NUM != #{sEmpNum} -->
+	SELECT EMP_NAME, DEPT_NAME, RANK_NAME, EMP_NUM
+	FROM (SELECT E.EMP_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, ROW_NUMBER() OVER(ORDER BY E.EMP_NUM DESC) AS RNUM
+		  FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                      ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                                 FROM APNTM
+                                 WHERE STS_NUM = 1) A
+		                     ON E.EMP_NUM = A.EMP_NUM
+                            AND A.RNUM = 1
+		                    AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+		             INNER JOIN DEPT D
+		                     ON A.DEPT_NUM = D.DEPT_NUM
+		             INNER JOIN RANK R
+		                     ON A.RANK_NUM = R.RANK_NUM )
+	WHERE EMP_NUM != #{sEmpNum}
+	</select>
+	
+	<!-- 보낸쪽지 테이블에 데이터 추가 -->
+	<insert id="sentNoteWrite" parameterType="hashmap">
+		INSERT INTO NOTE(NOTE_NUM, SNDR_EMP_NUM, NOTE_CNT, ATT_FILE)
+		VALUES(#{notesq}, #{sndr}, #{cnt}, #{attFile})
+	</insert>
+	
+	<!-- 받은쪽지 테이블에 데이터 추가 -->
+	<insert id="rcvdNoteWrite" parameterType="hashmap">
+		INSERT INTO NOTE_RCPNT_EMP(NOTE_NUM, RCPNT_EMP_NUM, NOTE_CNT, ATT_FILE)
+		VALUES(#{notesq}, #{rcpnt}, #{cnt}, #{attFile})
+	</insert>
+	
+	<!-- 쪽지번호 -->
+	<select id="noteSeq" resultType="String">
+		SELECT NOTE_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<!-- 보낸쪽지 삭제쿼리 -->
+	<update id="sentNoteDelete" parameterType="hashmap">
+		UPDATE NOTE SET DEL_CHECK = 1
+		WHERE NOTE_NUM = #{num} AND SNDR_EMP_NUM = #{sEmpNum}
+	</update>
+	
+	<!-- 받은쪽지 삭제쿼리 -->
+	<update id="rcvdNoteDelete" parameterType="hashmap">
+		UPDATE NOTE_RCPNT_EMP SET DEL_CHECK = 1
+		WHERE NOTE_NUM = #{num} AND RCPNT_EMP_NUM = #{sEmpNum}
+	</update>
+	
+	<!-- 받은쪽지 읽음 확인 쿼리 -->
+	<update id="rcvdNoteReadCheck" parameterType="hashmap">
+		UPDATE NOTE_RCPNT_EMP SET READ_CHECK = 1
+		WHERE NOTE_NUM = #{no}
+	</update>
+</mapper>

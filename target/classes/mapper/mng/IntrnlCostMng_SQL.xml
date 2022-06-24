@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="IntrnlCostMng">
+
+	<select id="getIntrnlCostMngCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM (  SELECT TO_CHAR(DATE_HR, 'YYYY-MM') AS DATE_MON
+		        FROM INTRNL_COST_MNG
+		        WHERE TO_CHAR(DATE_HR, 'YYYY') = #{year}
+		        GROUP BY TO_CHAR(DATE_HR, 'YYYY-MM')  )
+	</select>
+	
+	<select id="getIntrnlCostMngList" resultType="hashmap" parameterType="hashmap">
+		SELECT DATE_MON, AMNT_SUM
+		FROM (  SELECT TO_CHAR(DATE_HR, 'YYYY-MM') AS DATE_MON, TO_CHAR(SUM(AMNT), '999,999,999,999') AS AMNT_SUM,
+		               ROW_NUMBER() OVER(ORDER BY TO_CHAR(DATE_HR, 'YYYY-MM') DESC) AS RNUM
+		        FROM INTRNL_COST_MNG
+		        WHERE TO_CHAR(DATE_HR, 'YYYY') = #{year}
+		        GROUP BY TO_CHAR(DATE_HR, 'YYYY-MM')  )
+		WHERE RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="intrnlCostMngMnthlyCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM INTRNL_COST_MNG
+		WHERE TO_CHAR(DATE_HR, 'YYYY-MM') = #{mon}
+	</select>
+	
+	<select id="intrnlCostMngMnthlyList" resultType="hashmap" parameterType="hashmap">
+		SELECT INTRNL_DATE, CHIT_NUM, CRSPNDNT, TO_CHAR(AMNT, '999,999,999,999') AS AMNT, ACNT_NAME, RMRKS
+		FROM (  SELECT TO_CHAR(DATE_HR, 'YYYY-MM-DD') AS INTRNL_DATE, CHIT_NUM, CRSPNDNT, AMNT, AC.ACNT_NAME, RMRKS,
+					   ROW_NUMBER() OVER(ORDER BY TO_CHAR(DATE_HR, 'YYYY-MM-DD') DESC, CHIT_NUM DESC) AS RNUM
+				FROM INTRNL_COST_MNG ICM INNER JOIN ACNT_CODE AC
+				                             ON ICM.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+				                            AND AC.MAIN_CTGR_ACNT_CODE = 1
+				WHERE TO_CHAR(DATE_HR, 'YYYY-MM') = #{mon}  ) I
+		WHERE I.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="intrnlCostMngMnthlyData" resultType="hashmap" parameterType="hashmap">
+		SELECT TO_CHAR(SUM(AMNT), '999,999,999,999') AS AMNT
+		FROM INTRNL_COST_MNG ICM INNER JOIN ACNT_CODE AC
+		                                 ON ICM.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+		                                AND AC.MAIN_CTGR_ACNT_CODE = 1
+		WHERE TO_CHAR(DATE_HR, 'YYYY-MM') = #{mon}
+	</select>
+	
+	<select id="intrnlCostMngDtlView" resultType="hashmap" parameterType="hashmap">
+		SELECT E.EMP_NAME, TO_CHAR(ICM.RGSTRTN_DATE_HR, 'YYYY-MM-DD') AS DATE_RGS, TO_CHAR(ICM.DATE_HR, 'YYYY-MM-DD') AS DATE_D,
+		       ICM.CHIT_NUM, ICM.ACNT_NUM, AC.ACNT_NAME, ICM.CRSPNDNT, ICM.ITEM, ICM.QUNTY, 
+		       ICM.UNIT_PRICE, ICM.SPLY_PRICE, ICM.SRTX, ICM.BSNSMN_NUM, ICM.AMNT, ICM.RMRKS, ICM.ATT_FILE
+		FROM INTRNL_COST_MNG ICM INNER JOIN ACNT_CODE AC
+		                                 ON ICM.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+		                                AND AC.MAIN_CTGR_ACNT_CODE = 1
+		                         INNER JOIN EMP E
+		                                 ON ICM.EMP_NUM = E.EMP_NUM
+		WHERE ICM.CHIT_NUM = #{sendChitNum}
+	</select>
+	
+	<select id="getAcntSrchCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM ACNT_CODE
+		WHERE MAIN_CTGR_ACNT_CODE = 1
+		<if test="sendSrchTxt != null and sendSrchTxt != ''">
+			AND ACNT_NAME LIKE '%' || #{sendSrchTxt} || '%'
+		</if>
+	</select>
+	
+	<select id="getAcntSrchList" resultType="hashmap" parameterType="hashmap">
+		SELECT ACNT_CODE, ACNT_NAME, ABSTRCT
+		FROM (  SELECT SUB_CTGR_ACNT_CODE AS ACNT_CODE, ACNT_NAME, ABSTRCT,
+					   ROW_NUMBER() OVER(ORDER BY SUB_CTGR_ACNT_CODE) AS RNUM
+				FROM ACNT_CODE
+				WHERE MAIN_CTGR_ACNT_CODE = 1
+				<if test="sendSrchTxt != null and sendSrchTxt != ''">
+					AND ACNT_NAME LIKE '%' || #{sendSrchTxt} || '%'
+				</if>  ) A
+		WHERE A.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<insert id="writeIntrnlCostMng" parameterType="hashmap">
+		<selectKey order="BEFORE" keyProperty="CHIT_NUM" resultType="BigInteger">
+			SELECT TO_NUMBER(TO_CHAR(SYSDATE, 'YYMMDD') || NVL(TO_CHAR(MAX(SUBSTR(CHIT_NUM, 7))), '0000')) + 1
+			FROM (  SELECT CHIT_NUM, RGSTRTN_DATE_HR
+			        FROM INTRNL_COST_MNG
+			        UNION
+			        SELECT CHIT_NUM, RGSTRTN_DATE_HR
+			        FROM EXPNS_RSLTN  )
+			WHERE TO_CHAR(RGSTRTN_DATE_HR, 'YYYYMMDD') = TO_CHAR(SYSDATE, 'YYYYMMDD')
+		</selectKey>
+		INSERT INTO INTRNL_COST_MNG(CHIT_NUM, EMP_NUM, ACNT_NUM, CRSPNDNT, BSNSMN_NUM, ITEM, QUNTY, UNIT_PRICE,
+		            SPLY_PRICE, SRTX, AMNT, DATE_HR, RMRKS, ATT_FILE)
+		VALUES(#{CHIT_NUM}, #{empNum}, #{sendAcntCode}, #{expns}, #{bsnsmnNum}, #{item}, #{qunty}, #{unitPrice},
+			   #{splyPrice}, #{srtx}, #{amnt}, #{spendDate}, #{rmrks}, #{attFile})
+	</insert>
+	
+	<update id="updateIntrnlCostMng" parameterType="hashmap">
+		UPDATE INTRNL_COST_MNG SET ACNT_NUM = #{sendAcntCode},
+							   	   CRSPNDNT = #{expns},
+							   	   BSNSMN_NUM = #{bsnsmnNum},
+							   	   ITEM = #{item},
+							   	   QUNTY = #{qunty},
+							   	   UNIT_PRICE = #{unitPrice},
+							   	   SPLY_PRICE = #{splyPrice},
+							   	   SRTX = #{srtx},
+							   	   AMNT = #{amnt},
+							   	   DATE_HR = #{spendDate},
+							   	   RMRKS = #{rmrks},
+							   	   ATT_FILE = #{attFile}
+		WHERE CHIT_NUM = #{sendChitNum}
+	</update>
+	
+	<delete id="deleteIntrnlCostMng" parameterType="hashmap">
+		DELETE FROM INTRNL_COST_MNG
+		WHERE CHIT_NUM = #{sendChitNum}
+	</delete>
+	
+	<delete id="deleteMonIntrnlCostMng" parameterType="hashmap">
+		DELETE FROM INTRNL_COST_MNG
+		WHERE TO_CHAR(DATE_HR, 'YYYY-MM') = #{mon}
+	</delete>
+	
+</mapper>

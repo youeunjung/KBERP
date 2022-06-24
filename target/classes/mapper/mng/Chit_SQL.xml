@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ChitMng">
+	<!-- 매입/매출 전표 개수 조회 -->
+	<select id="getChitMngCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+        FROM (  SELECT CHIT_NUM, ACNT_NAME, AMNT AS DEVIT_AMNT, TO_NUMBER('') AS CREDIT_AMNT, RMRKS, TO_CHAR(DATE_HR, 'YYYY-MM') AS MONTH
+				FROM EXPNS_RSLTN ER INNER JOIN ACNT_CODE AC
+				                            ON ER.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+				                           AND AC.MAIN_CTGR_ACNT_CODE = 1
+				UNION
+				SELECT CHIT_NUM, ACNT_NAME, AMNT AS DEVIT_AMNT, TO_NUMBER('') AS CREDIT_AMNT, RMRKS, TO_CHAR(DATE_HR, 'YYYY-MM') AS MONTH
+				FROM INTRNL_COST_MNG ICM INNER JOIN ACNT_CODE AC
+				                                 ON ICM.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+				                                AND AC.MAIN_CTGR_ACNT_CODE = 1 
+				UNION
+				SELECT S.SALES_NUM AS CHIT_NUM, L.LEAD_NAME AS ACNT_NAME, TO_NUMBER('') AS DEVIT_AMNT, C.MONTH_INTRST_AMNT AS CREDIT_AMNT, '-' AS RMRKS, #{mon} AS MONTH
+				FROM CNTRCT C INNER JOIN SALES S
+				                      ON C.SALES_NUM = S.SALES_NUM
+				              INNER JOIN LEAD L
+				                      ON S.LEAD_NUM = L.LEAD_NUM  
+				WHERE TO_CHAR(CNTRCT_END_DATE, 'YYYY-MM') >= #{mon} AND #{mon} > TO_CHAR(CNTRCT_START_DATE, 'YYYY-MM')  )
+        WHERE MONTH = #{mon}
+	</select>
+	
+	<!-- 매입/매출 전표 목록 조회 -->
+	<select id="getChitMngList" resultType="hashmap" parameterType="hashmap">
+		SELECT CHIT_NUM, ACNT_NAME, TO_CHAR(DEVIT_AMNT, '999,999,999,999') AS DEVIT_AMNT, TO_CHAR(CREDIT_AMNT, '999,999,999,999') AS CREDIT_AMNT, RMRKS
+		FROM (  SELECT CHIT_NUM, ACNT_NAME, DEVIT_AMNT, CREDIT_AMNT, RMRKS, ROW_NUMBER() OVER(ORDER BY CHIT_NUM DESC) AS RNUM
+				FROM (  SELECT CHIT_NUM, ACNT_NAME, AMNT AS DEVIT_AMNT, TO_NUMBER('') AS CREDIT_AMNT, RMRKS, TO_CHAR(DATE_HR, 'YYYY-MM') AS MONTH
+						FROM EXPNS_RSLTN ER INNER JOIN ACNT_CODE AC
+						                            ON ER.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+						                           AND AC.MAIN_CTGR_ACNT_CODE = 1
+						UNION
+						SELECT CHIT_NUM, ACNT_NAME, AMNT AS DEVIT_AMNT, TO_NUMBER('') AS CREDIT_AMNT, RMRKS, TO_CHAR(DATE_HR, 'YYYY-MM') AS MONTH
+						FROM INTRNL_COST_MNG ICM INNER JOIN ACNT_CODE AC
+						                                 ON ICM.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+						                                AND AC.MAIN_CTGR_ACNT_CODE = 1 
+						UNION
+						SELECT S.SALES_NUM AS CHIT_NUM, L.LEAD_NAME AS ACNT_NAME, TO_NUMBER('') AS DEVIT_AMNT, C.MONTH_INTRST_AMNT AS CREDIT_AMNT, '-' AS RMRKS, #{mon} AS MONTH
+						FROM CNTRCT C INNER JOIN SALES S
+						                      ON C.SALES_NUM = S.SALES_NUM
+						              INNER JOIN LEAD L
+						                      ON S.LEAD_NUM = L.LEAD_NUM  
+						WHERE TO_CHAR(CNTRCT_END_DATE, 'YYYY-MM') >= #{mon} AND #{mon} > TO_CHAR(CNTRCT_START_DATE, 'YYYY-MM')  )
+				WHERE MONTH = #{mon}  ) C
+		WHERE C.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!-- 차변 합계, 대변 합계 조회 -->
+	<select id="getChitMngData" resultType="hashmap" parameterType="hashmap">
+		SELECT TO_CHAR(SUM(DEVIT_AMNT), '999,999,999,999') AS DEVIT_SUM, TO_CHAR(SUM(CREDIT_AMNT), '999,999,999,999') AS CREDIT_SUM
+		FROM (  SELECT CHIT_NUM, AMNT AS DEVIT_AMNT, TO_NUMBER('') AS CREDIT_AMNT, TO_CHAR(DATE_HR, 'YYYY-MM') AS MONTH
+		        FROM EXPNS_RSLTN ER INNER JOIN ACNT_CODE AC
+		                                    ON ER.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+		                                   AND AC.MAIN_CTGR_ACNT_CODE = 1
+		        UNION
+		        SELECT CHIT_NUM, AMNT AS DEVIT_AMNT, TO_NUMBER('') AS CREDIT_AMNT, TO_CHAR(DATE_HR, 'YYYY-MM') AS MONTH
+		        FROM INTRNL_COST_MNG ICM INNER JOIN ACNT_CODE AC
+		                                         ON ICM.ACNT_NUM = AC.SUB_CTGR_ACNT_CODE
+		                                        AND AC.MAIN_CTGR_ACNT_CODE = 1
+		        UNION
+		        SELECT S.SALES_NUM AS CHIT_NUM, TO_NUMBER('') AS DEVIT_AMNT, C.MONTH_INTRST_AMNT AS CREDIT_AMNT, #{mon} AS MONTH
+		        FROM CNTRCT C INNER JOIN SALES S
+		                              ON C.SALES_NUM = S.SALES_NUM
+		                      INNER JOIN LEAD L
+		                              ON S.LEAD_NUM = L.LEAD_NUM
+		        WHERE TO_CHAR(CNTRCT_END_DATE, 'YYYY-MM') >= #{mon} AND #{mon} > TO_CHAR(CNTRCT_START_DATE, 'YYYY-MM')  )
+		WHERE MONTH = #{mon}
+	</select>
+	
+	<!-- 지출결의서, 내부비용, 영업매출 전표 체크 -->
+	<select id="expnsRsltnCheck" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM EXPNS_RSLTN
+		WHERE CHIT_NUM = #{sendChitNum}
+	</select>
+	
+	<select id="intrnlCostCheck" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM INTRNL_COST_MNG
+		WHERE CHIT_NUM = #{sendChitNum}
+	</select>
+	
+	<select id="cntrctCheck" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM CNTRCT
+		WHERE SALES_NUM = #{sendChitNum}
+	</select>
+	
+	<select id="cntrctDtlView" resultType="hashmap" parameterType="hashmap">
+		SELECT C.CNTRCT_NUM, C.SALES_NUM, E.EMP_NAME, B.BANK_NAME, TO_CHAR(C.CNTRCT_DATE, 'YYYY-MM-DD') AS CNTRCT_DATE, 
+				TO_CHAR(C.CNTRCT_START_DATE, 'YYYY-MM-DD') AS CNTRCT_START_DATE, TO_CHAR(C.CNTRCT_END_DATE, 'YYYY-MM-DD') AS CNTRCT_END_DATE, 
+				DPST_ACNT_NUM, DPST_TRSC_OWNER_NAME, PYMT_ACNT_NUM, PAYER_NAME, TO_CHAR(RNWL_EXPCTD_DATE, 'YYYY-MM-DD') AS RNWL_EXPCTD_DATE, 
+				TO_CHAR(C.PRCD_DATE, 'YYYY-MM-DD') AS PRCD_DATE, TO_CHAR(MONTH_PYMNT_AMNT, '999,999,999,999') AS MONTH_PYMNT_AMNT, 
+				TO_CHAR(MONTH_INTRST_AMNT, '999,999,999,999') AS MONTH_INTRST_AMNT
+		FROM CNTRCT C INNER JOIN SALES S
+		                      ON C.SALES_NUM = S.SALES_NUM
+		              INNER JOIN SALES_CLNT_BANK B
+		                      ON C.DPST_BANK_NUM = B.DPST_BANK_NUM
+		              INNER JOIN EMP E
+		                      ON S.MNGR_EMP_NUM = E.EMP_NUM
+		WHERE C.SALES_NUM = #{sendChitNum}
+	</select>
+	
+	<!-- 매입매출결재 결재 성공 -->
+	<insert id="aprvlOk" parameterType="hashmap">
+		INSERT INTO PRCHS_RVN_APRVL (STNDR_YEAR_MONTH, APRVL_NUM, EMP_NUM)
+		VALUES (#{mon}, #{aprvlNum}, #{empNum})
+	</insert>
+	
+	<!-- 매입매출결재 결재상태 조회 -->
+	<select id="getChitMngAprvlSts" parameterType="hashmap" resultType="hashmap">
+		SELECT APRVL_STS
+		FROM PRCHS_RVN_APRVL
+		WHERE STNDR_YEAR_MONTH = #{mon}
+	</select>
+	
+	<!-- 매입매출결재 결재 재요청 성공 -->
+	<update id="aprvlAgainOk" parameterType="hashmap">
+		UPDATE PRCHS_RVN_APRVL SET APRVL_NUM = #{aprvlNum},
+								   EMP_NUM = #{empNum},
+								   APRVL_STS = '1'
+		WHERE STNDR_YEAR_MONTH = #{mon}
+	</update>
+	
+</mapper>

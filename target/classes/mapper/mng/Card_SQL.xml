@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="card">
+
+	<select id="getCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM CARD
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					AND CARD_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 1">
+					AND CARD_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	 <select id="cardList" resultType="hashmap" parameterType="hashmap">
+		SELECT *
+		 FROM ( SELECT CARD_NUM, CARD_NAME,EMP_NAME,TO_CHAR(USE_START_DT,'YYYY-MM-DD')AS USE_START_DT,
+        			 TO_CHAR(USE_END_DT,'YYYY-MM-DD')AS USE_END_DT,C.MNG_NUM, ROW_NUMBER() OVER(ORDER BY CARD_NUM ASC) AS RNUM
+       		   FROM CARD C LEFT JOIN 
+        	     (SELECT *
+                  FROM (SELECT MNG_NUM,EMP_NAME, USE_START_DT, USE_END_DT,ROW_NUMBER()OVER(PARTITION BY MNG_NUM ORDER BY CARD_USER_MNG_NUM DESC) AS CUMN
+                        FROM CARD_USER CU INNER JOIN EMP E
+                       		 ON CU.EMP_NUM = E.EMP_NUM
+                        WHERE 1=1)A
+                              WHERE CUMN=1) A
+                              ON C.MNG_NUM = A.MNG_NUM
+        WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''"> 
+					<choose>
+						<when test="searchGbn == 0">
+							AND CARD_NUM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 1">
+							AND CARD_NAME LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				) A
+				WHERE A.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	 <select id="cardView" resultType="hashmap" parameterType="hashmap">
+		SELECT C.MNG_NUM,CARD_NUM,CARD_DVSN,CARD_NAME,CARD_CMPNY_NAME, NAME,EMP_NAME,TO_CHAR(ISSUE_DT,'YYYY-MM-DD') AS ISSUE_DT
+			,TO_CHAR(END_DT,'YYYY-MM-DD') AS END_DT
+			,TO_CHAR(USE_START_DT,'YYYY-MM-DD') AS USE_START_DT
+			,TO_CHAR(USE_END_DT,'YYYY-MM-DD')AS USE_END_DT
+			,TO_CHAR(DSCRD_DT,'YYYY-MM-DD') AS DSCRD_DT
+			,C.RMRKS
+    FROM CARD C INNER JOIN CARD_CMPNY CC
+                    ON C.CARD_CMPNY_NUM = CC.CARD_CMPNY_NUM
+                    LEFT OUTER JOIN ( SELECT *
+                        FROM (SELECT MNG_NUM,EMP_NAME, USE_START_DT, USE_END_DT,ROW_NUMBER()OVER(PARTITION BY MNG_NUM ORDER BY CARD_USER_MNG_NUM DESC) AS CUMN
+                        FROM CARD_USER CU INNER JOIN EMP E
+                        ON CU.EMP_NUM = E.EMP_NUM
+                        WHERE 1=1)A
+                        WHERE CUMN=1) A
+                        ON  C.MNG_NUM = A.MNG_NUM
+                        WHERE C.CARD_NUM = #{no}
+	</select>
+	
+	<insert id="writeCard" parameterType="hashmap"> 
+		INSERT INTO CARD(MNG_NUM,CARD_CMPNY_NUM,CARD_NAME,CARD_DVSN,CARD_NUM,NAME,EMP_NUM,ISSUE_DT,END_DT,RGSTRTN_DT)
+		VALUES (CARD_SEQ.NEXTVAL,#{card_co},#{card_name},#{card_sep},#{card_code},#{use_name},#{use_num},#{issue_dt},#{end_dt},sysdate)
+	</insert>
+	 <select id="updateCard" resultType="hashmap" parameterType="hashmap">
+	  UPDATE CARD
+	     SET ISSUE_DT =#{issue_dt} ,END_DT = #{end_dt}, DSCRD_DT=#{del_dt}, RMRKS=#{rmrks}
+	 WHERE MNG_NUM =#{mng_num}
+	 </select>
+	 <select id="updateCard2" resultType="hashmap" parameterType="hashmap">
+	 UPDATE  CARD_USER
+	 	SET  USE_END_DT =#{use_end_dt}
+	  WHERE  MNG_NUM =#{mng_num}
+	 </select>
+	 <select id="getAllEmpCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM( SELECT E.EMP_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME
+		FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                      ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                               FROM APNTM
+                               WHERE STS_NUM = 1) A
+		                   ON E.EMP_NUM = A.EMP_NUM
+                          AND A.RNUM = 1
+		                  AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+		           INNER JOIN DEPT D
+		                   ON A.DEPT_NUM = D.DEPT_NUM
+		           INNER JOIN RANK R
+		                   ON A.RANK_NUM = R.RANK_NUM
+			<if test="sendSrchTxt != null and sendSrchTxt != ''">
+				AND E.EMP_NAME LIKE '%' || #{sendSrchTxt} || '%'
+			</if>
+			) 
+	</select>
+	
+	<select id="getAllEmpList" resultType="hashmap" parameterType="hashmap">
+		SELECT EMP_NAME, DEPT_NAME, RANK_NAME, EMP_NUM
+		FROM       (SELECT E.EMP_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, ROW_NUMBER() OVER(ORDER BY E.EMP_NUM DESC) AS RNUM
+		FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                      ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                               FROM APNTM
+                               WHERE STS_NUM = 1) A
+		                   ON E.EMP_NUM = A.EMP_NUM
+                          AND A.RNUM = 1
+		                  AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+		           INNER JOIN DEPT D
+		                   ON A.DEPT_NUM = D.DEPT_NUM
+		           INNER JOIN RANK R
+		                   ON A.RANK_NUM = R.RANK_NUM
+		             <if test="sendSrchTxt != null and sendSrchTxt != ''">
+		             	AND E.EMP_NAME LIKE '%' || #{sendSrchTxt} || '%'
+		             </if>
+		            )A
+		WHERE RNUM BETWEEN #{startCount} AND #{endCount}
+		</select>
+		<select id="cardUseHistory" resultType="hashmap" parameterType="hashmap">
+	SELECT * 
+	FROM (SELECT EMP_NAME
+				,TO_CHAR(USE_START_DT,'YYYY-MM-DD') AS USE_START_DT
+				,TO_CHAR(USE_END_DT,'YYYY-MM-DD') AS USE_END_DT
+				,CU.RMRKS,ROW_NUMBER() OVER(ORDER BY CARD_USER_MNG_NUM DESC) AS RNUM
+		  FROM CARD_USER CU INNER JOIN EMP E
+    						ON CU.EMP_NUM = E.EMP_NUM
+		  WHERE MNG_NUM = #{mng_num})A
+		WHERE RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	<select id="cardUseHistoryCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM (SELECT EMP_NAME
+				,TO_CHAR(USE_START_DT,'YYYY-MM-DD') AS USE_START_DT
+				,TO_CHAR(USE_END_DT,'YYYY-MM-DD') AS USE_END_DT
+				,RMRKS,ROW_NUMBER() OVER(ORDER BY CARD_USER_MNG_NUM DESC) AS RNUM
+		  FROM CARD_USER CU INNER JOIN EMP E
+    						ON CU.EMP_NUM = E.EMP_NUM
+		  WHERE MNG_NUM = #{mng_num})
+	</select>
+	
+	<insert id="writeUseCard" parameterType="hashmap">
+	INSERT INTO CARD_USER (CARD_USER_MNG_NUM,MNG_NUM,EMP_NUM,USE_START_DT,USE_END_DT,RMRKS)
+	VALUES (CARD_USER_SEQ.NEXTVAL,#{mng_num},#{use_num},#{use_start_dt},#{use_end_dt},#{rmrks})
+	</insert>
+</mapper>

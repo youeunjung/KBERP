@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board">
+<select id="getBoardCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM BOARD B INNER JOIN EMP E
+            				ON B.EMP_NUM = E.EMP_NUM
+		WHERE DEL_CHECK = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					 AND BOARD_TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 1">
+					 AND B.BOARD_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 2">
+					 AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		
+	</select>
+<select id ="getBoardList" resultType="hashmap" parameterType="hashmap">
+		SELECT *
+FROM(SELECT *
+		FROM (  SELECT B.WRTNG_NUM, B.BOARD_TITLE, E.EMP_NAME, B.BOARD_ADMNSTRTN_NUM, B.DEL_CHECK,
+               B.BOARD_HITS, TO_CHAR(BOARD_WRTNG_DATE, 'YYYY-MM-DD') AS BOARD_WRTNG_DATE, B.BOARD_CONT,
+               ROW_NUMBER() OVER(ORDER BY B.WRTNG_NUM DESC) AS RNUM
+		        FROM BOARD B INNER JOIN EMP E
+		                                ON B.EMP_NUM = E.EMP_NUM
+		        
+		     	WHERE B.DEL_CHECK = 1	AND BOARD_ADMNSTRTN_NUM = #{menuNum}
+		    ) A
+		WHERE A.RNUM BETWEEN #{startCount} AND #{endCount}
+
+   UNION
+        
+         SELECT *
+		FROM (  SELECT B.WRTNG_NUM, B.BOARD_TITLE, E.EMP_NAME, B.BOARD_ADMNSTRTN_NUM, B.DEL_CHECK,
+               B.BOARD_HITS, TO_CHAR(BOARD_WRTNG_DATE, 'YYYY-MM-DD') AS BOARD_WRTNG_DATE, B.BOARD_CONT,
+               ROW_NUMBER() OVER(ORDER BY B.WRTNG_NUM DESC) AS RNUM
+		        FROM BOARD B INNER JOIN EMP E
+		                                ON B.EMP_NUM = E.EMP_NUM
+		        
+		     	WHERE B.DEL_CHECK = 1	AND BOARD_ADMNSTRTN_NUM = 0
+		      
+		        <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn == 0">
+							 AND B.BOARD_TITLE LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 1">
+							 AND B.BOARD_CONT LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 2">
+							 AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+						</when>
+						
+					</choose>
+				</if>
+		    ) A
+		 WHERE A.RNUM BETWEEN #{startCount} AND #{endCount}     
+       )
+ORDER BY BOARD_ADMNSTRTN_NUM ASC,  RNUM ASC
+
+	</select>
+	<select id="boardView" resultType="hashmap" parameterType="hashmap">
+	SELECT B.WRTNG_NUM, B.BOARD_TITLE, B.BOARD_CONT, E.EMP_NAME,
+	     		   BOARD_HITS, TO_CHAR(BOARD_WRTNG_DATE, 'YYYY-MM-DD-HH24:MI') AS BOARD_WRTNG_DATE,
+	     		   B.ATCHD_FILE, B.BOARD_ADMNSTRTN_NUM, B.DEL_CHECK
+	    FROM BOARD B INNER JOIN EMP E
+	                    ON B.EMP_NUM = E.EMP_NUM
+	    WHERE B.WRTNG_NUM = #{no}
+	</select>
+	<update id="updateBoardViewHit" parameterType="hashmap">
+		 UPDATE BOARD SET BOARD_HITS = BOARD_HITS + 1
+		 WHERE WRTNG_NUM = #{no}
+	</update>
+	<insert id="boardWrite" parameterType="hashmap">
+			INSERT INTO BOARD(WRTNG_NUM, BOARD_TITLE, EMP_NUM, BOARD_CONT, BOARD_ADMNSTRTN_NUM, 
+			ATCHD_FILE )
+			VALUES(BOARD_SEQ.NEXTVAL, #{title}, #{writer}, #{con} , #{admnstrtn_num} ,  #{attFile})
+	</insert>
+	<update id="boardUpdate" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_TITLE = #{title}, 
+			   			 BOARD_CONT = #{con}
+			   		
+            
+               	 	   
+		WHERE WRTNG_NUM = #{no}
+	</update>
+	
+	<delete id="boardDelete" parameterType="hashmap">
+		UPDATE BOARD SET DEL_CHECK = 0
+		WHERE WRTNG_NUM = #{no}
+	</delete>
+	
+	<select id="getCmntCnt" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM BOARD_CMNT
+		WHERE DEL_CHECK = 1
+	</select>
+	
+	<select id="boardCmntlist" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM ( SELECT BC.CMNT_NUM, B.WRTNG_NUM, E.EMP_NAME, BC.CMNT_CONT ,
+                TO_CHAR(WRTNG_DATE, 'YYYY-MM-DD-HH24:MI') AS WRTNG_DATE,
+                   ROW_NUMBER() OVER(ORDER BY CMNT_NUM DESC) AS RNUM
+       FROM BOARD_CMNT BC INNER JOIN BOARD B
+		                                ON BC.WRTNG_NUM = B.WRTNG_NUM
+                          INNER JOIN EMP E
+		                                ON BC.EMP_NUM = E.EMP_NUM                             
+       WHERE BC.DEL_CHECK = 1) A
+		WHERE WRTNG_NUM = #{no}
+	</select>
+	
+	<insert id="boardCmntWrite" parameterType="hashmap">
+			INSERT INTO BOARD_CMNT(CMNT_NUM, WRTNG_NUM, EMP_NUM, CMNT_CONT)
+			VALUES(BOARD_CMNT_SEQ.NEXTVAL, #{no}, #{writer}, #{cmnt_cont})
+	</insert>
+	<!-- <update id="boardCmntUpdate" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_TITLE = #{title},
+             	 	    BOARD_CONT = #{con},
+             	 	   
+		WHERE WRTNG_NUM = #{no}
+	</update> -->
+	<delete id="boardCmntDelete" parameterType="hashmap">
+		UPDATE BOARD_CMNT SET DEL_CHECK = 0
+		WHERE CMNT_NUM = #{cmntNo}
+	</delete>
+	<select id="boardAdmnstrlist" parameterType="hashmap" resultType="hashmap">
+		SELECT BOARD_ADMNSTRTN_NUM, CTGRY_NAME, DEL_CHECK,
+		 		ROW_NUMBER() OVER(ORDER BY WRTNG_DATE ASC) AS RNUM
+		FROM BOARD_ADMNSTRTN
+		WHERE DEL_CHECK = 1
+	</select>
+	
+	<insert id="boardAdmnstrWrite" parameterType="hashmap">
+			INSERT INTO BOARD_ADMNSTRTN(BOARD_ADMNSTRTN_NUM, EMP_NUM, CTGRY_NAME)
+			VALUES(BOARD_ADMNSTRTN_SEQ.NEXTVAL,  #{writer}, #{ctgry_name})
+	</insert>
+	<delete id="boardAdmnstrDelete" parameterType="hashmap">
+		UPDATE BOARD_ADMNSTRTN SET DEL_CHECK = 0
+		WHERE CTGRY_NAME = #{admstrName}
+	</delete>
+	<select id ="getBoardntcList" resultType="hashmap" parameterType="hashmap">
+		SELECT B.WRTNG_NUM, B.BOARD_TITLE, E.EMP_NAME, B.BOARD_ADMNSTRTN_NUM,
+               B.BOARD_HITS, TO_CHAR(BOARD_WRTNG_DATE, 'YYYY-MM-DD') AS BOARD_WRTNG_DATE, B.BOARD_CONT,
+               ROW_NUMBER() OVER(ORDER BY B.WRTNG_NUM DESC) AS RNUM
+             FROM BOARD B INNER JOIN EMP E
+		                                ON B.EMP_NUM = E.EMP_NUM
+	
+		WHERE BOARD_ADMNSTRTN_NUM = 0
+	</select>
+</mapper>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="prjctMng">
+
+	<select id="getCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM PRJCT
+		WHERE 1=1
+	
+	</select>
+	 <select id="prjctMngList" resultType="hashmap" parameterType="hashmap">
+		SELECT *
+		FROM ( SELECT PRJCT_NUM, PRJCT_NAME,EMP_NAME,DEL,
+       			      TO_CHAR(START_DATE,'YYYY-MM-DD') AS START_DATE,
+                      TO_CHAR(END_DATE,'YYYY-MM-DD') AS END_DATE,
+                      RMRKS,
+                      ROW_NUMBER () OVER(ORDER BY P.PRJCT_NUM DESC) AS RNUM
+			   FROM PRJCT P INNER JOIN EMP E
+                                    ON P.EMP_NUM = E.EMP_NUM
+			   WHERE 1=1) A
+		WHERE DEL = 0 AND A.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="prjctView" resultType="hashmap" parameterType="hashmap">
+	SELECT P.PRJCT_NUM,PRJCT_NAME,E.EMP_NAME, TO_CHAR(P.START_DATE, 'YYYY-MM-DD') AS START_DATE,
+         TO_CHAR(P.END_DATE, 'YYYY-MM-DD') AS END_DATE,CONT,RMRKS,PI.CNT
+	FROM PRJCT P INNER JOIN EMP E
+                ON P.EMP_NUM = E.EMP_NUM
+                INNER JOIN (
+							SELECT COUNT (EMP_NUM) AS CNT
+                			FROM PRJCT_INPUT_MAN_PWR
+                			WHERE PRJCT_NUM = #{prjct_num}) PI
+					ON 1=1
+	WHERE PRJCT_NUM = #{prjct_num}           
+	</select>
+	<select id="prjctView2" resultType="hashmap" parameterType="hashmap">
+	SELECT P.PRJCT_NUM,EN.EMP_NAME,
+       TO_CHAR(PI.START_DATE, 'YYYY-MM-DD') AS PI_START_DATE,
+       TO_CHAR(PI.END_DATE, 'YYYY-MM-DD') AS PI_END_DATE,
+      (select count(EMP_NUM) from PRJCT_INPUT_MAN_PWR) AS EC, EN.DEPT_NAME, EN.RANK_NAME
+	FROM PRJCT P LEFT OUTER JOIN PRJCT_INPUT_MAN_PWR PI
+                    ON P.PRJCT_NUM = PI.PRJCT_NUM
+             INNER JOIN (SELECT E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, E.EMP_NUM
+      FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                      ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                               FROM APNTM
+                               WHERE STS_NUM = 1) A
+                         ON E.EMP_NUM = A.EMP_NUM
+                          AND A.RNUM = 1
+                        AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+                 INNER JOIN DEPT D
+                         ON A.DEPT_NUM = D.DEPT_NUM
+                 INNER JOIN RANK R
+                         ON A.RANK_NUM = R.RANK_NUM) EN
+                         ON PI.EMP_NUM = EN.EMP_NUM
+	WHERE P.PRJCT_NUM=#{prjct_num}    
+	</select>
+	<insert id="prjctWrite" parameterType="hashmap"> 
+	 INSERT INTO PRJCT(PRJCT_NUM,EMP_NUM,PRJCT_NAME,START_DATE,END_DATE,CONT,RMRKS,RGSTRTN_DATE)
+     VALUES (PRJCT_SEQ.NEXTVAL,#{writer},#{prjct_name},#{start_date},#{end_date},#{cont},#{rmrks},SYSDATE)
+	</insert>
+	 <select id="prjctUpdate" resultType="hashmap" parameterType="hashmap">
+	   UPDATE PRJCT
+	     SET PRJCT_NAME = #{prjct_name} ,START_DATE = #{start_date}, END_DATE=#{end_date}, RMRKS=#{rmrks},CONT=#{cont}
+	 WHERE prjct_num =#{prjct_num}
+	 </select>
+	 <select id="prjctDel" resultType="hashmap" parameterType="hashmap">
+	   UPDATE PRJCT
+	     SET DEL = 1
+	 WHERE prjct_num =#{prjct_num}
+	 </select>
+	 <select id="input_delete" resultType="hashmap" parameterType="hashmap">
+	    DELETE FROM PRJCT_INPUT_MAN_PWR
+        WHERE EMP_NUM=#{chk}
+	 </select>
+	
+</mapper>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="common">
+	<select id="loginCheck" parameterType="hashmap" resultType="hashmap">
+		SELECT E.EMP_NUM, E.EMP_NAME, E.EMP_PCTR_FILE, E.ATHRTY_NUM, D.DEPT_NUM, D.DEPT_NAME, R.RANK_NAME
+		FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                      ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                               FROM APNTM
+                               WHERE STS_NUM = 1) A
+		                   ON E.EMP_NUM = A.EMP_NUM
+                          AND A.RNUM = 1
+		                  AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+		           INNER JOIN DEPT D
+		                   ON A.DEPT_NUM = D.DEPT_NUM
+		           INNER JOIN RANK R
+		                   ON A.RANK_NUM = R.RANK_NUM
+		WHERE E.EMP_NUM = #{id}
+		AND E.PW = #{pw}
+	</select>
+	
+	<select id="getTopMenu" parameterType="String" resultType="hashmap">
+		SELECT M.MENU_NUM, M.MENU_NAME, CASE WHEN M.MENU_NUM = 21
+		                                     THEN 'board'
+		                                     ELSE M2.ADRS
+		                                END AS ADRS, CASE WHEN M.MENU_NUM = 21
+		                                     THEN 1
+		                                     ELSE M.ADD_PRMTR
+		                                END AS ADD_PRMTR
+		FROM MENU M INNER JOIN MENU_ATHRTY MA
+		                    ON M.MENU_NUM = MA.MENU_NUM
+		                   AND MA.ATHRTY_TYPE_NUM IN (1, 2)
+		                   AND MA.ATHRTY_NUM = #{athrtyNum}
+		            INNER JOIN MENU M2
+		                    ON M.ADD_PRMTR = M2.MENU_NUM
+		WHERE M.DEPTH = 1
+		ORDER BY M.MENU_NUM ASC
+	</select>
+	
+	<select id="getLeftMenu" parameterType="hashmap" resultType="hashmap">
+		SELECT M.MENU_NUM, M.MENU_NAME, M.SUPER_MENU_NUM, M.ADRS, M.ADD_PRMTR, M.DEPTH, M.CNT, M.MENU_FLOW, M.MENU_TYPE
+		FROM (
+		SELECT M.MENU_NUM, M.MENU_NAME, M.SUPER_MENU_NUM, M.ADRS, M.ADD_PRMTR, M.DEPTH,
+			   DECODE(M.MENU_NUM, 22, NVL(TM.CNT, 0) + B.BCNT, NVL(TM.CNT, 0)) AS CNT,
+		       SUBSTR(SYS_CONNECT_BY_PATH(M.MENU_NUM, ','), 2) AS MENU_FLOW, 'M' AS MENU_TYPE
+		FROM MENU M INNER JOIN MENU_ATHRTY MA
+		                    ON M.MENU_NUM = MA.MENU_NUM
+		                   AND MA.ATHRTY_TYPE_NUM IN (1, 2)
+		                   AND MA.ATHRTY_NUM = #{athrtyNum}
+		            LEFT OUTER JOIN (SELECT M.SUPER_MENU_NUM, COUNT(*) AS CNT
+		                             FROM MENU M INNER JOIN MENU_ATHRTY MA
+		                                                 ON M.MENU_NUM = MA.MENU_NUM
+		                                                AND MA.ATHRTY_TYPE_NUM IN (1, 2)
+		                                                AND MA.ATHRTY_NUM = #{athrtyNum}
+		                             GROUP BY M.SUPER_MENU_NUM) TM
+		                         ON M.MENU_NUM = TM.SUPER_MENU_NUM
+		            LEFT OUTER JOIN (SELECT COUNT(*) AS BCNT
+		            				 FROM BOARD_ADMNSTRTN
+		            				 WHERE DEL_CHECK = 1) B
+		            			 ON 1 = 1
+		WHERE 1 = 1
+		START WITH DEPTH = 1
+		CONNECT BY PRIOR M.MENU_NUM = M.SUPER_MENU_NUM) M
+        WHERE M.MENU_FLOW LIKE #{top} || '%'
+        UNION ALL
+        SELECT BOARD_ADMNSTRTN_NUM AS MENU_NUM, CTGRY_NAME AS MENU_NAME, 
+               22, 'board', BOARD_ADMNSTRTN_NUM AS ADD_PRMTR, 3, 0,
+               '21,22,' || BOARD_ADMNSTRTN_NUM AS MENU_FLOW, 'B' AS MENU_TYPE
+        FROM BOARD_ADMNSTRTN
+        WHERE DEL_CHECK = 1
+        AND 21 = #{top}
+	</select>
+	
+	<select id="menuAthrtyCheck" parameterType="hashmap" resultType="String">
+		SELECT ATHRTY_TYPE_NUM
+		FROM MENU_ATHRTY
+		WHERE ATHRTY_NUM = #{athrtyNum}
+		AND MENU_NUM = #{menuNum}
+	</select>
+	
+	<select id="getCmnCode" parameterType="String" resultType="hashmap">
+		SELECT SUB_CTGR_NUM, CODE_NAME
+		FROM CMN_CODE
+		WHERE DEL_CHECK = 1
+		AND MAIN_CTGR_NUM = #{mainCtgrNum}
+		ORDER BY SUB_CTGR_NUM ASC
+	</select>
+	
+</mapper>

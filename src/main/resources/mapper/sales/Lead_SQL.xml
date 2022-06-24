@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lead">
+<!-- ******************************* 리드 조회 리스트 ******************************* -->		
+	<select id="getLeadList" resultType="hashmap" parameterType="hashmap">
+		SELECT LL.LEAD_NUM, LL.CLNT_CMPNY_NAME, LL.CLNT_NAME, LL.EMP_NAME, LL.PRGRS_STS_NUM, LL.PSNUM, LL.LEAD_NAME, LL.RGSTRTN_DATE, LL.PSBL_CHECK
+		FROM (  SELECT L.LEAD_NUM, CC.CLNT_CMPNY_NAME, EC.CLNT_NAME, E.EMP_NAME, L.LEAD_NAME, L.PRGRS_STS_NUM,
+		               DECODE(L.PRGRS_STS_NUM, 1, '진행중', 2, '종료(영업기회 전환)', 3, '종료(영업기회 실패)') AS PSNUM, 
+		               TO_CHAR(L.RGSTRTN_DATE, 'YYYY-MM-DD') AS RGSTRTN_DATE, 
+		               ROW_NUMBER() OVER(ORDER BY 
+		               <choose>
+		               	<when test="listSort == 0">
+			               L.LEAD_NUM DESC
+		               	</when>
+		               	<when test="listSort == 1">
+		               		L.RGSTRTN_DATE DESC
+		               	</when>
+		               	<when test="listSort == 2">
+		               		L.LEAD_NAME ASC
+		               	</when>
+		               	<when test="listSort == 3">
+		               		CC.CLNT_CMPNY_NAME ASC 
+		               	</when>
+		               </choose>
+		               ) AS RNUM, L.PSBL_CHECK
+		        FROM LEAD L LEFT OUTER JOIN EMP E
+		                            ON L.MNGR_EMP_NUM = E.EMP_NUM
+		                    INNER JOIN ENTRPRS_CLNT EC
+		                            ON L.CLNT_NUM = EC.CLNT_NUM
+		                    INNER JOIN CLNT_CMPNY CC
+		                            ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		        AND L.DEL_CHECK IS NULL
+		        AND TO_CHAR(L.RGSTRTN_DATE, 'YYYY-MM-DD') BETWEEN #{startDate} AND #{endDate}
+		        <if test="sales_sts != 0">
+		        	<choose>
+		        		<when test="sales_sts == 1">
+		        			AND PSBL_CHECK BETWEEN 0 AND 20
+		        		</when>
+		        		<when test="sales_sts == 2">
+		        			AND PSBL_CHECK BETWEEN 21 AND 40
+		        		</when>
+		        		<when test="sales_sts == 3">
+		        			AND PSBL_CHECK BETWEEN 41 AND 60
+		        		</when>
+		        		<when test="sales_sts == 4">
+		        			AND PSBL_CHECK BETWEEN 61 AND 80
+		        		</when>
+		        		<when test="sales_sts == 5">
+		        			AND PSBL_CHECK BETWEEN 81 AND 100
+		        		</when>
+		        	</choose>
+		        </if>
+				<choose>
+					<when test="psNum != 0" > <!-- 선택안함 : 0 이 아니면 해당 번호 목록으로 검색 -->
+						AND L.PRGRS_STS_NUM = #{psNum}
+					</when>
+				</choose> 
+				<choose>
+					<when test="mngEmp != null and mngEmp != ''"> <!-- 담당자텍스트 박스 -->
+						AND E.EMP_NAME LIKE '%' || #{mngEmp} || '%'
+					</when>
+				</choose>
+				<if test="searchTxt != null and searchTxt != ''"> <!-- 검색어가 비어있지 않으면 -->
+					<choose>
+						<when test="srchType == 0">
+							AND (L.LEAD_NAME LIKE '%' || #{searchTxt} || '%' OR 
+                                 CC.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%' OR
+                                 EC.CLNT_NAME LIKE '%' || #{searchTxt} || '%' OR 
+                                 L.LEAD_NUM LIKE '%' || #{searchTxt} || '%')
+						</when>
+						<when test="srchType == 1">
+							AND L.LEAD_NAME LIKE '%' || #{searchTxt} || '%' <!-- 리드명 -->
+						</when>
+						<when test="srchType == 2">
+							AND CC.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%' <!-- 고객사명 -->
+						</when>
+						<when test="srchType == 3">
+							AND EC.CLNT_NAME LIKE '%' || #{searchTxt} || '%' <!-- 고객명 -->
+						</when>
+						<when test="srchType == 4">
+							AND L.LEAD_NUM LIKE '%' || #{searchTxt} || '%' <!-- 리드번호 -->
+						</when>			
+					</choose>
+				</if> ) LL
+		WHERE LL.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="getLeadCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM LEAD L LEFT OUTER JOIN EMP E
+		                   		 ON L.MNGR_EMP_NUM = E.EMP_NUM
+		            INNER JOIN ENTRPRS_CLNT EC
+		                    ON L.CLNT_NUM = EC.CLNT_NUM
+		            INNER JOIN CLNT_CMPNY CC
+		                    ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		WHERE 1 = 1
+		AND L.DEL_CHECK IS NULL
+		AND TO_CHAR(L.RGSTRTN_DATE, 'YYYY-MM-DD') BETWEEN #{startDate} AND #{endDate}
+			<choose>
+				<when test="psNum != 0"> 
+					AND PRGRS_STS_NUM = #{psNum}
+				</when>
+			</choose>
+		    <if test="sales_sts != 0">
+		      	<choose>
+		       		<when test="sales_sts == 1">
+		       			AND PSBL_CHECK BETWEEN 0 AND 20
+		       		</when>
+		       		<when test="sales_sts == 2">
+		       			AND PSBL_CHECK BETWEEN 21 AND 40
+		       		</when>
+		       		<when test="sales_sts == 3">
+		       			AND PSBL_CHECK BETWEEN 41 AND 60
+		       		</when>
+		       		<when test="sales_sts == 4">
+		       			AND PSBL_CHECK BETWEEN 61 AND 80
+		       		</when>
+		       		<when test="sales_sts == 5">
+		       			AND PSBL_CHECK BETWEEN 81 AND 100
+		       		</when>
+		       	</choose>
+		    </if>
+			<choose>
+				<when test="mngEmp != null and mngEmp != ''">
+					AND E.EMP_NAME LIKE '%' || #{mngEmp} || '%'
+				</when>
+			</choose>
+			<if test="searchTxt != null and searchTxt != ''">
+				<choose>
+					<when test="srchType == 0">
+						AND (L.LEAD_NAME LIKE '%' || #{searchTxt} || '%' OR 
+                             CC.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%' OR
+                             EC.CLNT_NAME LIKE '%' || #{searchTxt} || '%' OR 
+                             L.LEAD_NUM LIKE '%' || #{searchTxt} || '%')
+					</when>
+					<when test="srchType == 1">
+						AND L.LEAD_NAME LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="srchType == 2">
+						AND CC.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="srchType == 3">
+						AND EC.CLNT_NAME LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="srchType == 4">
+						AND L.LEAD_NUM LIKE '%' || #{searchTxt} || '%'
+					</when>			
+				</choose>
+			</if>
+	</select>
+	
+	<select id="getListCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM LEAD 
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+	</select>
+	
+	<select id="getOngoingCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM LEAD 
+		WHERE DEL_CHECK IS NULL
+		AND PRGRS_STS_NUM = 1
+	</select>
+	
+	<select id="getRcgntnCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM LEAD 
+		WHERE DEL_CHECK IS NULL
+		AND PRGRS_STS_NUM = 2
+	</select>
+	
+	<select id="getFailCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM LEAD 
+		WHERE DEL_CHECK IS NULL
+		AND PRGRS_STS_NUM = 3
+	</select>
+	
+<!-- ******************************* 담당자 조회 팝업 리스트 ******************************* -->	
+	<select id="getMngrList" resultType="hashmap" parameterType="hashmap">
+		SELECT MNGR.EMP_NUM, MNGR.EMP_NAME, MNGR.RANK_NAME, MNGR.DEPT_NAME
+		FROM ( SELECT E.EMP_NUM, E.EMP_NAME, R.RANK_NAME, D.DEPT_NUM, D.DEPT_NAME, ROW_NUMBER() OVER(ORDER BY E.EMP_NUM ASC) AS RNUM
+		        FROM EMP E INNER JOIN APNTM A
+		                           ON E.EMP_NUM = A.EMP_NUM
+		                   INNER JOIN DEPT D
+		                           ON A.DEPT_NUM = D.DEPT_NUM
+		                   INNER JOIN RANK R
+		                           ON A.RANK_NUM = R.RANK_NUM
+		        WHERE D.DEPT_NAME LIKE '영%'
+				<choose>
+					<when test="deptS != 6">
+		       			AND D.DEPT_NUM = #{deptS}
+					</when>
+				</choose>
+				<if test="searchT != null and searchT != ''">
+		        	<choose>
+		       			<when test="empS == 0">
+		            	   AND E.EMP_NUM LIKE '%' || #{searchT} || '%'
+		            	</when>
+		       			<when test="empS == 1">
+		            	   AND E.EMP_NAME LIKE '%' || #{searchT} || '%'
+		            	</when>
+		        	</choose>
+		      	</if> ) MNGR
+		WHERE MNGR.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="getMngrCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM EMP E INNER JOIN APNTM A
+		                           ON E.EMP_NUM = A.EMP_NUM
+		                   INNER JOIN DEPT D
+		                           ON A.DEPT_NUM = D.DEPT_NUM
+		                   INNER JOIN RANK R
+		                           ON A.RANK_NUM = R.RANK_NUM
+		WHERE D.DEPT_NAME LIKE '영%'
+		<choose>
+			<when test="deptS != 6">
+       			AND D.DEPT_NUM = #{deptS}
+			</when>
+		</choose>
+		<if test="searchT != null and searchT != ''">
+        	<choose>
+       			<when test="empS == 0">
+            	   AND E.EMP_NUM LIKE '%' || #{searchT} || '%'
+            	</when>
+       			<when test="empS == 1">
+            	   AND E.EMP_NAME LIKE '%' || #{searchT} || '%'
+            	</when>
+        	</choose>
+      	</if>
+	</select>
+	
+<!-- ******************************* 고객사 조회 팝업 리스트 ******************************* -->		
+	<select id="getCcList" resultType="hashmap" parameterType="hashmap">
+		SELECT CC.CLNT_CMPNY_NUM, CC.CLNT_CMPNY_NAME, CC.CLNT_CMPNY_CLSFY_NAME, CC.GRADE_NUM, CC.GRADE_NAME, CC.ADRS, CC.DTL_ADRS, CC.RD
+		FROM (  SELECT CC.CLNT_CMPNY_NUM, CC.CLNT_CMPNY_NAME, CC.CLNT_CMPNY_CLSFY_NUM, CCC.CLNT_CMPNY_CLSFY_NAME, CCG.GRADE_NUM, CCG.GRADE_NAME, CC.ADRS, CC.DTL_ADRS, CC.RGSTRTN_DATE,
+		               ROW_NUMBER() OVER(ORDER BY CC.CLNT_CMPNY_NUM DESC) RNUM, TO_CHAR(CC.RGSTRTN_DATE, 'YYYY-MM-DD') AS RD
+		        FROM CLNT_CMPNY CC INNER JOIN CLNT_CMPNY_CLSFY CCC
+		                                   ON CC.CLNT_CMPNY_CLSFY_NUM = CCC.CLNT_CMPNY_CLSFY_NUM
+		                           INNER JOIN CLNT_CMPNY_GRADE CCG
+		                                   ON CC.GRADE_NUM = CCG.GRADE_NUM
+		                                   AND CC.DEL_CHECK IS NULL
+		         WHERE 1 = 1                          
+				<choose>
+					<when test="cccnType != 6">
+						AND CC.CLNT_CMPNY_CLSFY_NUM = #{cccnType}
+					</when>
+				</choose>
+				<choose>
+					<when test="ccSearchTxt != null and ccSearchTxt != ''"> <!-- 고객사명 텍스트박스 -->
+						AND CC.CLNT_CMPNY_NAME LIKE '%' || #{ccSearchTxt} || '%'
+					</when>
+				</choose> ) CC
+		WHERE CC.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<select id="getCcCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY CC INNER JOIN CLNT_CMPNY_CLSFY CCC
+		                           ON CC.CLNT_CMPNY_CLSFY_NUM = CCC.CLNT_CMPNY_CLSFY_NUM
+		                   INNER JOIN CLNT_CMPNY_GRADE CCG
+		                           ON CC.GRADE_NUM = CCG.GRADE_NUM
+		                           AND CC.DEL_CHECK IS NULL
+		WHERE 1 = 1
+		<choose>
+			<when test="cccnType != 6">
+				AND CC.CLNT_CMPNY_CLSFY_NUM = #{cccnType}
+			</when>
+		</choose>
+		<choose>
+			<when test="ccSearchTxt != null and ccSearchTxt != ''"> <!-- 고객사명 텍스트박스 -->
+				AND CC.CLNT_CMPNY_NAME LIKE '%' || #{ccSearchTxt} || '%'
+			</when>
+		</choose>         
+	</select>
+	
+<!-- ******************************* 고객 조회 팝업 리스트 ******************************* -->	
+	<select id="getEcList" resultType="hashmap" parameterType="hashmap">
+		SELECT EC.CLNT_NUM, EC.CLNT_NAME, EC.CLNT_CMPNY_NUM, EC.CLNT_CMPNY_NAME, EC.GRADE_NUM, EC.GRADE_NAME, EC.RDATE, EC.EMP_NUM, EC.EMP_NAME
+		FROM (  SELECT EC.CLNT_NUM, EC.CLNT_NAME, CC.CLNT_CMPNY_NUM, CC.CLNT_CMPNY_NAME, CCG.GRADE_NUM, CCG.GRADE_NAME, TO_CHAR(CC.RGSTRTN_DATE, 'YYYY-MM-DD') AS RDATE,
+		    		   ROW_NUMBER() OVER(ORDER BY EC.CLNT_NUM DESC) AS RNUM, E.EMP_NUM, E.EMP_NAME
+				FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMPNY CC
+		             		                 ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		             		         INNER JOIN CLNT_CMPNY_GRADE CCG
+		              		                 ON CC.GRADE_NUM = CCG.GRADE_NUM
+                          			 INNER JOIN EMP E
+                                    	     ON EC.MNGR_EMP_NUM = E.EMP_NUM
+		                              		AND EC.DEL_CHECK IS NULL
+		    	<choose>
+					<when test="ecSearchTxt != null and ecSearchTxt != ''"> <!-- 고객/고객사명 텍스트박스 -->
+						AND (EC.CLNT_NAME LIKE '%' || #{ecSearchTxt} || '%' OR 
+                             CC.CLNT_CMPNY_NAME LIKE '%' || #{ecSearchTxt} || '%')
+					</when>
+				</choose>  ) EC
+		WHERE EC.RNUM BETWEEN #{startCount} AND #{endCount}	                                     
+	</select>
+	
+	<select id="getEcCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMPNY CC
+		                             ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		                     INNER JOIN CLNT_CMPNY_GRADE CCG
+		                             ON CC.GRADE_NUM = CCG.GRADE_NUM
+		                             AND EC.DEL_CHECK IS NULL
+		WHERE 1 = 1
+		<choose>
+			<when test="ecSearchTxt != null and ecSearchTxt != ''"> <!-- 고객/고객사명 텍스트박스 -->
+				AND (EC.CLNT_NAME LIKE '%' || #{ecSearchTxt} || '%' OR 
+                     CC.CLNT_CMPNY_NAME LIKE '%' || #{ecSearchTxt} || '%')
+			</when>
+		</choose>		
+	</select>
+<!-- ******************************* 리드 등록 ******************************* -->		
+	<insert id="getLeadAdd" parameterType="hashmap">
+		INSERT INTO LEAD(LEAD_NUM, LEAD_NAME, CLNT_NUM, RCGNTN_PATH_NUM, RGSTRTN_EMP_NUM, MNGR_EMP_NUM, PSBL_CHECK)
+		VALUES(LEAD_SEQ.NEXTVAL, #{leadName}, #{clntNum}, #{rp}, #{mngNum}, #{mngNum}, #{psblCheck}) 
+	</insert>
+<!-- ******************************* 리드 등록 첨부파일 ******************************* -->
+ 	<insert id="getLeadAttAdd" parameterType="hashmap">
+		INSERT INTO LEAD_ATT_FILE(ATT_FILE_NUM, LEAD_NUM, ATT_FILE_NAME)
+		VALUES(LEAD_ATT_FILE_SEQ.NEXTVAL, LEAD_SEQ.CURRVAL, #{attFile})
+	</insert>
+<!-- ******************************* 리드 등록에서 고객 추가 ******************************* -->	
+ 	<insert id="getClntAdd" parameterType="hashmap">
+		INSERT INTO ENTRPRS_CLNT(CLNT_NUM, CLNT_NAME, CLNT_CMPNY_NUM, MNGR_EMP_NUM, RGSTRTN_EMP_NUM, DEPT, DUTY, MBL, EMAIL)
+		VALUES(ENTRPRS_CLNT_SEQ.NEXTVAL, #{clntName}, #{ccNumber}, #{mngNumber}, #{mngNumber}, #{dept}, #{duty}, #{mbl}, #{email})
+	</insert> 		
+<!-- ******************************* 리드 상세 ******************************* -->		
+	<select id="getLeadCont" resultType="hashmap" parameterType="hashmap">	
+		SELECT LD.LEAD_NAME, LD.MNGR_EMP_NUM, EC.CLNT_NUM, EC.CLNT_NAME, CC.CLNT_CMPNY_NAME, CC.GRADE_NUM, LD.RCGNTN_PATH_NUM, E.EMP_NAME,
+        	   L.PRGRS_STS_NUM, LAF.ATT_FILE_NAME, LD.PSBL_CHECK
+		FROM LEAD LD INNER JOIN ENTRPRS_CLNT EC
+		                     ON LD.CLNT_NUM = EC.CLNT_NUM
+		             INNER JOIN CLNT_CMPNY CC
+		                     ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		             INNER JOIN EMP E
+		                     ON LD.MNGR_EMP_NUM = E.EMP_NUM
+		             INNER JOIN LEAD L 
+		             		 ON L.LEAD_NUM = LD.LEAD_NUM
+		             INNER JOIN LEAD_ATT_FILE LAF
+		             		 ON LD.LEAD_NUM = LAF.LEAD_NUM
+		WHERE LD.LEAD_NUM = #{leadNum}           
+	</select>
+<!-- ******************************* 리드 수정 ******************************* -->		
+	<update id="getLeadUpdate" parameterType="hashmap">
+		UPDATE LEAD SET LEAD_NAME = #{leadName},
+                MNGR_EMP_NUM = #{mngNum},
+                CLNT_NUM = #{clntNum},
+                RCGNTN_PATH_NUM = #{rp},
+                PRGRS_STS_NUM =  #{psNum},
+                PSBL_CHECK = #{psblCheck}
+		WHERE LEAD_NUM = #{leadNum}
+	</update>
+<!-- ******************************* 리드 영업기회 전환 성공시 수정 ******************************* -->		
+	<update id="scsUpdate" parameterType="hashmap">
+		UPDATE LEAD SET LEAD_NAME = #{leadName},
+                MNGR_EMP_NUM = #{mngNum},
+                CLNT_NUM = #{clntNum},
+                RCGNTN_PATH_NUM = #{rp},
+                PSBL_CHECK = #{psblCheck}
+		WHERE LEAD_NUM = #{leadNum}
+	</update>
+<!-- ******************************* 리드 첨부파일 수정 ******************************* -->		
+	<update id="getLeadAttUpdate" parameterType="hashmap">
+		UPDATE LEAD_ATT_FILE SET ATT_FILE_NAME = #{attFile}
+		WHERE LEAD_NUM = #{leadNum}
+	</update>
+<!-- ******************************* 리드 삭제 ******************************* -->		
+	<update id="getLeadDelete" parameterType="hashmap">
+		UPDATE LEAD SET DEL_CHECK = SYSDATE
+		WHERE LEAD_NUM = #{leadNum}
+	</update>	
+<!-- ******************************* 영업기회 저장시 리드 진행상태 수정 ******************************* -->	
+	<update id="psNumUpdate" parameterType="hashmap">
+		UPDATE LEAD SET PRGRS_STS_NUM = 2
+		WHERE LEAD_NUM = #{leadNum}
+	</update>	
+</mapper>

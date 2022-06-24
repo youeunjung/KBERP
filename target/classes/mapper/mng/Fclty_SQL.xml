@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Fclty">
+
+<!-- 시설물예약목록 -->
+<select id="rsvtnFcltyList" resultType="hashmap" parameterType="hashmap">
+	SELECT  O.RSVTN_NUM, O.FCLTY_NAME, O.RSVTN_DATE,O.EMP_NUM,  
+       		O.START_TIME, O.END_TIME,DECODE(O.STS_NUM,0,'승인대기',1,'취소된 예약',2,'승인',3,'승인거절') AS STS_NUM
+	FROM        (SELECT R.RSVTN_NUM, F.FCLTY_NAME, TO_CHAR(R.RSVTN_DATE,'YYYY-MM-DD')AS RSVTN_DATE, 
+                  		RT.START_TIME, RT.END_TIME, R.STS_NUM,ROW_NUMBER() OVER(ORDER BY R.RSVTN_NUM DESC) AS RSUM,R.USE_NUM_OF_PL,R.EMP_NUM
+            	 FROM FCLTY_RSVTN R  INNER JOIN FCLTY F 
+                                ON R.FCLTY_NUM = F.FCLTY_NUM
+                                INNER JOIN RSVTN_TIME_DVSN RT
+                                ON R.TIME_DVSN_NUM = RT.TIME_DVSN_NUM
+	             WHERE F.DEL = 0 AND STS_NUM != 1 AND R.EMP_NUM = #{sesEmpNum}
+	<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					AND F.FCLTY_NAME LIKE '%' || #{searchTxt} || '%' 
+				</when>
+			</choose>
+	</if>
+	) O 
+	WHERE O.RSUM BETWEEN #{startCount} AND #{endCount} 
+
+</select>
+
+<!-- 시설물예약목록 CNT -->
+<select id="fcltyListRqstCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM FCLTY_RSVTN  R INNER JOIN FCLTY F 
+						ON R.FCLTY_NUM = F.FCLTY_NUM
+	WHERE F.DEL = 0 AND R.EMP_NUM = #{sesEmpNum}	
+	<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					AND F.FCLTY_NAME LIKE '%' || #{searchTxt} || '%' 
+				</when>
+			</choose>
+	</if>
+</select>
+
+<!-- 예약가능한 시설물 목록 -->
+<select id="fcltUseRqstCalList" resultType="hashmap" parameterType="hashmap">
+	SELECT FCLTY_NAME, PLACE, FCLTY_NUM
+	FROM FCLTY
+	WHERE DEL = 0 
+		<if test="fSearchTxt != null and fSearchTxt != ''">
+				<choose>
+					<when test="fSearchGbn == 0">
+						AND FCLTY_NAME LIKE '%' || #{fSearchTxt} || '%' 
+					</when>
+					<when test="fSearchGbn == 1">
+						AND PLACE LIKE '%' || #{fSearchTxt} || '%' 
+					</when>
+				</choose>
+		</if>
+</select>
+
+<!-- 예약가능한 시간대 목록 -->
+<select id="getTimeList" resultType="hashmap" parameterType="hashmap">
+	SELECT O2.TIME_DVSN_NUM,O2.START_TIME,O2.END_TIME
+	FROM (SELECT O1.FCLTY_NUM,RT.TIME_DVSN_NUM,RT.START_TIME,RT.END_TIME
+	      FROM ( SELECT FCLTY_NUM, TIME_DVSN_NUM
+	             FROM FCLTY_RSVTN
+	             WHERE RSVTN_DATE = #{rsvtnDate} AND FCLTY_NUM = #{no}) O1 RIGHT OUTER JOIN RSVTN_TIME_DVSN RT
+	                                              						ON O1.TIME_DVSN_NUM = RT.TIME_DVSN_NUM
+	    )O2
+	WHERE O2.FCLTY_NUM IS NULL
+	ORDER BY O2.TIME_DVSN_NUM
+</select>
+
+<!-- 시설물 예약 등록 -->
+<select id="fcltUseRqstWrite" parameterType="hashmap">
+INSERT INTO FCLTY_RSVTN(RSVTN_NUM, EMP_NUM, FCLTY_NUM, TIME_DVSN_NUM, RSVTN_DATE, USE_NUM_OF_PL, USE_USE)
+VALUES(FCLT_RSRV_SEQ.NEXTVAL, #{sesEmpNum},#{no},#{fcltyTimeNum},#{rsvtnDate},#{useNumOfPl},#{useUse})
+</select>
+
+
+<!-- 시설물예약 상세보기 -->
+<select id="fcltUseRqstView" resultType="hashmap" parameterType="hashmap">
+	SELECT F.FCLTY_NAME,F.PLACE, TO_CHAR(R.RSVTN_DATE,'YYYY-MM-DD')AS RSVTN_DATE, 
+       	   RT.START_TIME, RT.END_TIME,R.USE_NUM_OF_PL,DECODE(R.STS_NUM,0,'승인대기',1,'취소된 예약',2,'승인',3,'승인거절') AS STS_NUM,R.USE_USE
+	FROM FCLTY_RSVTN R  INNER JOIN FCLTY F 
+                    ON R.FCLTY_NUM = F.FCLTY_NUM
+                    INNER JOIN RSVTN_TIME_DVSN RT
+                    ON R.TIME_DVSN_NUM = RT.TIME_DVSN_NUM
+	WHERE F.DEL = 0 AND R.RSVTN_NUM = #{no}
+</select>
+
+<!-- 시설물예약취소 -->
+<select id="fcltUseRqstCncl" parameterType="hashmap">
+	DELETE FROM FCLTY_RSVTN
+	WHERE RSVTN_NUM = #{no}
+</select>
+
+<!-- 시설물목록 -->
+<select id="fcltyList" resultType="hashmap" parameterType="hashmap">
+	SELECT O.FCLTY_NUM, O.FCLTY_NAME, O.PLACE, O.EMP_NAME, O.ACPT_NUM_OF_PL
+	FROM( SELECT F.FCLTY_NUM, F.FCLTY_NAME, F.PLACE, E.EMP_NAME, F.ACPT_NUM_OF_PL,ROW_NUMBER() OVER(ORDER BY F.FCLTY_NUM DESC) AS RSUM
+	      FROM FCLTY F  INNER JOIN EMP E 
+	      				ON F.EMP_NUM = E.EMP_NUM
+	      WHERE DEL = 0 
+	<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					AND F.FCLTY_NAME LIKE '%' || #{searchTxt} || '%' 
+				</when>
+				<when test="searchGbn == 1">
+					AND F.PLACE LIKE '%' || #{searchTxt} || '%' 
+				</when>
+			</choose>
+	</if>
+	     ) O 
+	WHERE O.RSUM BETWEEN #{startCount} AND #{endCount}
+</select>
+
+<!-- 시설물목록 cnt -->
+<select id="fcltyListCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM FCLTY
+	WHERE DEL = 0 
+	<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					AND FCLTY_NAME LIKE '%' || #{searchTxt} || '%' 
+				</when>
+				<when test="searchGbn == 1">
+					AND PLACE LIKE '%' || #{searchTxt} || '%' 
+				</when>
+			</choose>
+	</if>
+</select>
+
+<!-- 시설물등록시 관리자리스트 -->
+<select id="getEmpList" resultType="hashmap" parameterType="hashmap">
+	SELECT O.EMP_NUM,O.EMP_NAME
+	FROM       ( SELECT A.EMP_NUM,E.EMP_NAME,ROW_NUMBER() OVER(ORDER BY E.EMP_NUM DESC) AS RNUM
+        		FROM DEPT D INNER JOIN APNTM A
+                    		ON D.DEPT_NUM = A.DEPT_NUM
+                   			INNER JOIN EMP E
+                    		ON A.EMP_NUM = E.EMP_NUM
+        		WHERE D.DEPT_NUM = 5 
+	             <if test="sendSrchTxt != null and sendSrchTxt != ''">
+	             	AND E.EMP_NAME LIKE '%' || #{sendSrchTxt} || '%'
+	             </if>
+	            )O
+	WHERE O.RNUM BETWEEN #{startCount} AND #{endCount}
+	
+</select>
+
+<!-- 시설물등록시 관리자리스트 cnt-->
+<select id="getEmpCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*)
+	FROM(   SELECT A.EMP_NUM,E.EMP_NAME,ROW_NUMBER() OVER(ORDER BY E.EMP_NUM DESC) AS RNUM
+       		FROM DEPT D INNER JOIN APNTM A
+                    ON D.DEPT_NUM = A.DEPT_NUM
+                    INNER JOIN EMP E
+                    ON A.EMP_NUM = E.EMP_NUM
+       		WHERE D.DEPT_NUM = 5 
+		<if test="sendSrchTxt != null and sendSrchTxt != ''">
+			AND E.EMP_NAME LIKE '%' || #{sendSrchTxt} || '%'
+		</if>
+		) 
+</select>
+
+<!-- 시설물등록 -->
+<select id="fcltyAdd" parameterType="hashmap">
+	INSERT INTO FCLTY(FCLTY_NUM, EMP_NUM, MNG_EMP_NUM, FCLTY_NAME, ATT_PCTR, 
+					  PLACE, ACPT_NUM_OF_PL, RMRKS)
+	VALUES(FCLT_SEQ.NEXTVAL, #{mngEmpNum},#{empNum},#{fcltyName},
+		   #{attName},#{place},#{acptNum},#{rmrks})
+</select>
+
+<!-- 시설물상세보기 -->
+<select id="fcltyView" resultType="hashmap" parameterType="hashmap">
+	SELECT F.FCLTY_NUM, F.FCLTY_NAME ,F.PLACE, E.EMP_NAME, E2.EMP_NAME AS MNG_EMP,F.EMP_NUM
+		  ,F.ACPT_NUM_OF_PL, TO_CHAR(F.RGSTRTN_DATE,'YYYY-MM-DD')AS RGSTRTN_DATE, F.RMRKS,F.ATT_PCTR
+	FROM FCLTY F INNER JOIN EMP E 
+             ON F.EMP_NUM = E.EMP_NUM
+             INNER JOIN EMP E2
+             ON F.MNG_EMP_NUM = E2.EMP_NUM
+	WHERE FCLTY_NUM = #{no} AND DEL = 0
+</select>
+
+<!-- 시설물상세보기안에 해당 시설물예약목록 -->
+<select id="fcltyViewList" resultType="hashmap" parameterType="hashmap">
+	SELECT O.RSVTN_NUM, O.EMP_NAME,O.RSVTN_DATE, O.START_TIME, O.END_TIME, O.USE_USE, O.USE_NUM_OF_PL,O.STS_NUM
+	FROM    (SELECT FR.RSVTN_NUM, E.EMP_NAME, TO_CHAR(FR.RSVTN_DATE,'YYYY-MM-DD')AS RSVTN_DATE,RT.START_TIME, RT.END_TIME, FR.USE_USE, 
+                FR.USE_NUM_OF_PL, DECODE(FR.STS_NUM,0,'승인대기',1,'예약취소',2,'승인',3,'승인거절') AS STS_NUM,
+                ROW_NUMBER() OVER(ORDER BY FR.RSVTN_NUM DESC) AS RSUM
+         	 FROM FCLTY_RSVTN FR INNER JOIN RSVTN_TIME_DVSN RT
+                             ON FR.TIME_DVSN_NUM = RT.TIME_DVSN_NUM
+                             INNER JOIN EMP E 
+                             ON FR.EMP_NUM = E.EMP_NUM
+        	 WHERE FR.FCLTY_NUM = #{no} 
+        	 	<if test="fSearchTxt != null and fSearchTxt != ''">
+					<choose>
+						<when test="fSearchGbn == 0">
+							AND E.EMP_NAME LIKE '%' || #{fSearchTxt} || '%' 
+						</when>
+					</choose>
+				</if>
+        	 ) O
+	WHERE O.RSUM BETWEEN #{startCount} AND #{endCount}
+</select>
+
+<!-- 시설물상세보기안에 해당 시설물예약목록 cnt -->
+<select id="fcltyViewListCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM FCLTY_RSVTN FR INNER JOIN EMP E
+	                    ON FR.EMP_NUM = E.EMP_NUM
+	WHERE FCLTY_NUM = #{no}
+	<if test="fSearchTxt != null and fSearchTxt != ''">
+		<choose>
+			<when test="fSearchGbn == 0">
+					AND E.EMP_NAME LIKE '%' || #{fSearchTxt} || '%' 
+			</when>
+		</choose>
+	</if>
+</select>
+
+<!-- 시설물수정 -->
+<select id="fcltyUpdate" parameterType="hashmap">
+	UPDATE  FCLTY SET FCLTY_NAME = #{fcltyName}, PLACE = #{place}, 
+        	MNG_EMP_NUM = #{empNum}, ACPT_NUM_OF_PL = #{acptNum}, 
+        	ATT_PCTR = #{attFile}, RMRKS = #{rmrks}
+	WHERE FCLTY_NUM = #{no}
+</select>
+
+<!-- 시설물 삭제 -->
+<select id="fcltDelete" parameterType="hashmap">
+	UPDATE FCLTY SET DEL = 1
+	WHERE FCLTY_NUM = #{no}
+</select>
+</mapper>
+
+
+
+

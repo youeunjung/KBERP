@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="totalRprt">
+
+	<select id="getTotalNewSalesRank" resultType="hashmap">
+		SELECT CNT0, CNT1, CNT2, CNT3
+		FROM ((SELECT E.CNT AS CNT0
+		      FROM ( SELECT E.EMP_NAME, COUNT(*) CNT
+		             FROM SALES S INNER JOIN EMP E
+		                             ON S.MNGR_EMP_NUM = E.EMP_NUM           
+		             WHERE TO_CHAR(START_DATE, 'YY-MM') =  TO_CHAR(SYSDATE, 'YY-MM')
+		             AND E.EMP_NAME = '하대리'
+		             GROUP BY E.EMP_NAME )E ) A INNER JOIN (SELECT E.CNT AS CNT1
+		                                                FROM ( SELECT E.EMP_NAME, COUNT(*) CNT
+		                                                       FROM SALES S INNER JOIN EMP E
+		                                                                            ON S.MNGR_EMP_NUM = E.EMP_NUM           
+		                                                       WHERE TO_CHAR(START_DATE, 'YY-MM') =  TO_CHAR(SYSDATE, 'YY-MM')
+		                                                       AND E.EMP_NAME = '윤부장'
+		                                                       GROUP BY E.EMP_NAME ) E ) B
+		                                            ON 1 = 1
+		                                    INNER JOIN (SELECT E.CNT AS CNT2
+		                                                FROM ( SELECT E.EMP_NAME, COUNT(*) CNT
+		                                                       FROM SALES S INNER JOIN EMP E
+		                                                                            ON S.MNGR_EMP_NUM = E.EMP_NUM           
+		                                                       WHERE TO_CHAR(START_DATE, 'YY-MM') =  TO_CHAR(SYSDATE, 'YY-MM')
+		                                                       AND E.EMP_NAME = '천과장'
+		                                                       GROUP BY E.EMP_NAME )E ) C
+		                                            ON 1 = 1
+		                                    INNER JOIN (SELECT E.CNT AS CNT3
+		                                                FROM ( SELECT E.EMP_NAME, COUNT(*) CNT
+		                                                       FROM SALES S INNER JOIN EMP E
+		                                                                            ON S.MNGR_EMP_NUM = E.EMP_NUM           
+		                                                       WHERE TO_CHAR(START_DATE, 'YY-MM') =  TO_CHAR(SYSDATE, 'YY-MM')
+		                                                       AND E.EMP_NAME = '이부장'
+		                                                       GROUP BY E.EMP_NAME ) E) D
+		                                            ON 1= 1)                                           
+	</select>
+
+</mapper>

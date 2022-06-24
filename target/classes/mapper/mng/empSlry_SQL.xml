@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="empSlryMng">
+	
+  
+  
+ 
+  
+	 <select id="slrSpcfctnView" resultType="hashmap" parameterType="hashmap">
+		WITH MAIN AS(
+    SELECT E.EMP_NUM, E.EMP_NAME,D.DEPT_NAME, R.RANK_NAME,BK.BANK_NAME,SA.DPSTR,SA.ACNT_NUM,S.SLRY AS SLRY,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 1  THEN B.AMNT ELSE 0 END)) AS BNFT_1,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 2  THEN B.AMNT ELSE 0 END)) AS BNFT_2,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 3  THEN B.AMNT ELSE 0 END)) AS BNFT_3,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 4  THEN B.AMNT ELSE 0 END)) AS BNFT_4,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 5  THEN B.AMNT ELSE 0 END)) AS BNFT_5,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 6  THEN B.AMNT ELSE 0 END)) AS BNFT_6,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 7  THEN B.AMNT ELSE 0 END)) AS BNFT_7,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 8  THEN B.AMNT ELSE 0 END)) AS BNFT_8,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 9  THEN B.AMNT ELSE 0 END)) AS BNFT_9,
+          SUM((CASE WHEN B.BNFT_LIST_NUM = 10 THEN B.AMNT ELSE 0 END)) AS BNFT_10
+     FROM EMP E INNER JOIN (SELECT EMP_NUM, DEPT_NUM, RANK_NUM, END_DATE,
+                                   ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY APNTM_NUM DESC) AS RNUM
+                              FROM APNTM
+                             WHERE STS_NUM = 1) A
+                   ON E.EMP_NUM = A.EMP_NUM
+                  AND A.RNUM = 1
+                  AND (A.END_DATE IS NULL OR TO_CHAR(A.END_DATE, 'YYYYMMDD') >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+                 INNER JOIN DEPT D
+                         ON A.DEPT_NUM = D.DEPT_NUM
+                 INNER JOIN RANK R
+                         ON A.RANK_NUM = R.RANK_NUM
+                 INNER JOIN SLRY S
+                         ON E.EMP_NUM = S.EMP_NUM
+                 INNER JOIN SLRY_ACNT SA
+                         ON E.EMP_NUM = SA.EMP_NUM
+                 INNER JOIN BANK BK
+                         ON SA.BANK_NUM = BK.BANK_NUM
+                 INNER JOIN BNFT B
+                         ON E.EMP_NUM = B.EMP_NUM
+                        AND S.STNDR_YEAR_MONTH = TO_CHAR(B.STNDR_YEAR_MONTH, 'YYYY-MM')
+                 INNER JOIN BNFT_LIST BL
+                         ON B.BNFT_LIST_NUM = BL.BNFT_LIST_NUM
+    WHERE 1=1
+      AND S.STNDR_YEAR_MONTH = #{mon}
+      AND E.EMP_NUM = #{sEmpNum}
+    GROUP BY D.DEPT_NAME, R.RANK_NAME, E.EMP_NAME, E.EMP_NUM, S.SLRY, S.STNDR_YEAR_MONTH,BK.BANK_NAME,B.AMNT,SA.DPSTR,SA.ACNT_NUM
+ )
+ SELECT EMP_NUM
+      , EMP_NAME
+      , DEPT_NAME
+      , RANK_NAME
+      , BANK_NAME
+      , DPSTR
+      , ACNT_NUM
+      ,TO_CHAR(SLRY,'999,999,999,999') AS SLRY
+      ,TO_CHAR(SUM(BNFT_1) ,'999,999,999,999')AS BNFT_1
+      ,TO_CHAR(SUM(BNFT_2) ,'999,999,999,999')AS BNFT_2
+      ,TO_CHAR(SUM(BNFT_3) ,'999,999,999,999')AS BNFT_3
+      ,TO_CHAR(SUM(BNFT_4) ,'999,999,999,999')AS BNFT_4
+      ,TO_CHAR(SUM(BNFT_5) ,'999,999,999,999')AS BNFT_5
+      ,TO_CHAR(SUM(BNFT_6) ,'999,999,999,999')AS BNFT_6
+      ,TO_CHAR(SUM(BNFT_7) ,'999,999,999,999')AS BNFT_7
+      ,TO_CHAR(SUM(BNFT_8) ,'999,999,999,999')AS BNFT_8
+      ,TO_CHAR(SUM(BNFT_9) ,'999,999,999,999')AS BNFT_9
+      ,TO_CHAR(SUM(BNFT_10),'999,999,999,999')AS BNFT_10
+      ,TO_CHAR(SLRY * 0.045, '999,999,999,999') AS KM
+      ,TO_CHAR(SLRY * 0.0343, '999,999,999,999') AS KG
+      ,TO_CHAR(SLRY * 0.0343 * 0.1152, '999,999,999,999') AS YY
+      ,TO_CHAR(SLRY * 0.008 , '999,999,999,999') AS KY
+      ,TO_CHAR(SLRY * 0.04, '999,999,999,999') AS KR
+      ,TO_CHAR(SLRY * 0.04 * 0.1, '999,999,999,999') AS JB
+      , TO_CHAR(SLRY + SUM(BNFT_1) + SUM(BNFT_2) + SUM(BNFT_3) + SUM(BNFT_4) + SUM(BNFT_5) + SUM(BNFT_6) + SUM(BNFT_7) + SUM(BNFT_8) + SUM(BNFT_9) + SUM(BNFT_10), '999,999,999,999') AS ADBNFT
+      , TO_CHAR((SLRY * 0.045) + (SLRY * 0.0343) + (SLRY * 0.0343 * 0.1152) + (SLRY * 0.008) + (SLRY * 0.04) + (SLRY * 0.04 * 0.1), '999,999,999,999') AS WH
+      , TO_CHAR((SLRY + SUM(BNFT_1) + SUM(BNFT_2) + SUM(BNFT_3) + SUM(BNFT_4) + SUM(BNFT_5) + SUM(BNFT_6) + SUM(BNFT_7) + SUM(BNFT_8) + SUM(BNFT_9) + SUM(BNFT_10)) 
+               - ((SLRY * 0.045) + (SLRY * 0.0343) + (SLRY * 0.0343 * 0.1152) + (SLRY * 0.008) + (SLRY * 0.04) + (SLRY * 0.04 * 0.1)), '999,999,999,999') AS RESULT_AMT
+   FROM MAIN
+ GROUP BY EMP_NUM, EMP_NAME, DEPT_NAME, RANK_NAME, BANK_NAME, DPSTR, ACNT_NUM, SLRY
+	</select>
+</mapper>

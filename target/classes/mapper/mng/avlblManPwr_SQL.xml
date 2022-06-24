@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="avlblManPwr">
+<!-- 프로젝트 투입관리 -->
+
+<select id="empList" resultType="hashmap" parameterType="hashmap">
+	SELECT D.DEPT_NAME,R.RANK_NAME,E.EMP_NAME
+	FROM EMP E LEFT OUTER JOIN PRJCT_INPUT_MAN_PWR PI 
+	                      ON E.EMP_NUM = PI.EMP_NUM
+	                INNER JOIN APNTM A
+	                      ON E.EMP_NUM = A.EMP_NUM
+	                INNER JOIN DEPT D
+	                      ON A.DEPT_NUM = D.DEPT_NUM
+	                INNER JOIN RANK R
+	                      ON A.RANK_NUM = R.RANK_NUM
+	WHERE PRJCT_NUM IS NULL OR #{selectDate} NOT BETWEEN TO_CHAR(PI.START_DATE, 'YYYY-MM-DD') AND TO_CHAR(PI.END_DATE, 'YYYY-MM-DD')
+	ORDER BY E.EMP_NUM
+</select>
+
+<select id="empCount" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*)
+	FROM    (SELECT D.DEPT_NAME,R.RANK_NAME,E.EMP_NAME
+         	 FROM EMP E LEFT OUTER JOIN PRJCT_INPUT_MAN_PWR PI 
+                          ON E.EMP_NUM = PI.EMP_NUM
+                    INNER JOIN APNTM A
+                          ON E.EMP_NUM = A.EMP_NUM
+                    INNER JOIN DEPT D
+                          ON A.DEPT_NUM = D.DEPT_NUM
+                    INNER JOIN RANK R
+                          ON A.RANK_NUM = R.RANK_NUM
+    WHERE PI.PRJCT_NUM IS NULL OR #{selectDate} NOT BETWEEN TO_CHAR(PI.START_DATE, 'YYYY-MM-DD') AND TO_CHAR(PI.END_DATE, 'YYYY-MM-DD')
+    ORDER BY E.EMP_NUM ASC )
+</select>
+
+</mapper>

@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="prsnl">
+	<!--* 인사기록카드 : 가져오기 쿼리 *-->
+	<!-- 인사기록카드 - 기본정보 가져오기 -->
+	<select id="getBasicInfo" parameterType="hashmap" resultType="hashmap">
+		SELECT EMP.EMP_NUM, EMP.EMP_NAME, EMP.EMP_NAME_ENG, EMP.EMP_PCTR_FILE,
+		       A.DEPT_NUM, A.START_DATE, A.END_DATE, R.RANK_NAME, D.DEPT_NAME
+		FROM EMP LEFT OUTER JOIN (  SELECT TO_CHAR(SQ.START_DATE, 'YYYY-MM-DD') AS START_DATE, TO_CHAR(SQ.END_DATE, 'YYYY-MM-DD') AS END_DATE,
+			                               SQ.EMP_NUM, SQ.RANK_NUM, SQ.DEPT_NUM
+			                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+							                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE DESC) AS NEWEST
+							                FROM APNTM
+							                WHERE STS_NUM = '1' ) SQ
+							        WHERE SQ.NEWEST = '1'
+			                        ) A
+		                 	  ON EMP.EMP_NUM = A.EMP_NUM
+		         LEFT OUTER JOIN RANK R
+		                 	  ON A.RANK_NUM = R.RANK_NUM
+		         LEFT OUTER JOIN (  SELECT DEPT_NUM, DEPT_NAME, DEL_CHECK
+		                            FROM DEPT
+		                            WHERE DEL_CHECK = 1
+		                            ) D
+		                      ON A.DEPT_NUM = D.DEPT_NUM
+		WHERE EMP.EMP_NUM = #{sEmpNum}
+	</select>
+	<!-- 인사기록카드 - 인적정보 가져오기 -->
+	<select id="getHumanInfo" parameterType="hashmap" resultType="hashmap">
+		SELECT TO_CHAR(BRTHDT, 'YYYY-MM-DD') AS BRTHDT, GNDR, EMAIL, ZIP_CODE, ADRS, DTL_ADRS, PHONE_NUM, MBL_NUM
+		FROM EMP
+		WHERE EMP_NUM = #{sEmpNum}
+	</select>
+	<!-- 인사기록카드 - 재직정보 가져오기 -->
+	<select id="getWorkInfo" parameterType="hashmap" resultType="hashmap">
+		SELECT EMP.EMP_NUM, EMP.HIRE_TYPE, EMP.PRBTN_CHECK,
+		       DECODE(A1.START_DATE, NULL, -1, DECODE(A2.END_DATE, NULL, 0, 1)) AS WORK_TYPE,
+		       DECODE(A1.START_DATE, NULL, ' ', TO_CHAR(A1.START_DATE, 'YYYY-MM-DD')) AS JOIN_DATE,
+		       DECODE(A2.END_DATE, NULL, ' ', TO_CHAR(A2.END_DATE, 'YYYY-MM-DD')) AS RSGNT_DATE
+		FROM EMP LEFT OUTER JOIN (  SELECT SQ.START_DATE, SQ.END_DATE, SQ.EMP_NUM
+			                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+			                                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE ASC) AS OLDEST
+			                                FROM APNTM
+			                                WHERE STS_NUM = '1' ) SQ
+			                        WHERE SQ.OLDEST = '1'
+			                        ) A1
+		                 	  ON EMP.EMP_NUM = A1.EMP_NUM
+		         LEFT OUTER JOIN (  SELECT SQ.START_DATE, SQ.EMP_NUM, SQ.RANK_NUM, SQ.DEPT_NUM,
+			                               CASE WHEN SQ.END_DATE > SYSDATE
+			                                    THEN NULL
+			                                    ELSE SQ.END_DATE
+			                               END AS END_DATE
+			                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+			                                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE DESC) AS NEWEST
+			                                FROM APNTM
+			                                WHERE STS_NUM = '1' ) SQ
+			                        WHERE SQ.NEWEST = '1'
+		                            ) A2
+		                 	  ON EMP.EMP_NUM = A2.EMP_NUM
+		WHERE EMP.EMP_NUM = #{sEmpNum}
+	</select>
+	<!-- 인사기록카드 - 급여정보 가져오기 -->
+	<select id="getSlryInfo" parameterType="hashmap" resultType="hashmap">
+		SELECT B.BANK_NAME, SA.ACNT_NUM, SA.DPSTR, SA.BNKBK_COPY_FILE
+		FROM SLRY_ACNT SA INNER JOIN BANK B
+		                          ON SA.BANK_NUM = B.BANK_NUM
+		WHERE SA.EMP_NUM = #{sEmpNum}
+	</select>
+	<!-- 인사기록카드 - 학력사항 목록 가져오기 -->
+	<select id="getEdctnLevel" parameterType="hashmap" resultType="hashmap">
+		SELECT EDCTN_LEVEL_NUM, SCHL_NAME, TO_CHAR(ADMSN_DATE, 'YYYY-MM-DD') AS ADMSN_DATE,
+		       TO_CHAR(GRDTN_DATE, 'YYYY-MM-DD') AS GRDTN_DATE, GRADE, SCHL_REGSTR_DVSN, GRDTN_CRTFCT_FILE
+		FROM EDCTN_LEVEL
+		WHERE EMP_NUM = #{sEmpNum}
+		ORDER BY ADMSN_DATE DESC <!-- 일단 입학일 순 정렬 :: 정렬 조건도 추가하기? -->
+	</select>
+	<!-- 인사기록카드 - 경력사항 목록 가져오기 -->
+	<select id="getCr" parameterType="hashmap" resultType="hashmap">
+		SELECT CR_NUM, CMPNY_NAME, TO_CHAR(JOIN_DATE, 'YYYY-MM-DD') AS JOIN_DATE, TO_CHAR(RSGNT_DATE, 'YYYY-MM-DD') AS RSGNT_DATE,
+		       DEPT, PSTN, JOB
+		FROM CR
+		WHERE EMP_NUM = #{sEmpNum}
+		ORDER BY JOIN_DATE DESC <!-- 얘도 일단 입사일 순 정렬 -->
+	</select>
+	<!-- 인사기록카드 - 자격사항 목록 가져오기 -->
+	<select id="getQlfctn" parameterType="hashmap" resultType="hashmap">
+		SELECT LCNS_NUM, LCNS_NAME, TO_CHAR(ACQRMNT_DATE, 'YYYY-MM-DD') AS ACQRMNT_DATE,
+ 		       ISSUE_ORGNZT, ACQRMNT_SCORE, TO_CHAR(EXPRTN_DATE, 'YYYY-MM-DD') AS EXPRTN_DATE, COPY_FILE
+		FROM LCNS
+		WHERE EMP_NUM = #{sEmpNum}
+		ORDER BY ACQRMNT_DATE DESC <!-- 취득일 순 정렬 -->
+	</select>
+	
+	<!--* 인사기록카드 : 수정하기 쿼리 *-->
+	<update id="editHumanInfo" parameterType="hashmap">
+		UPDATE EMP SET EMAIL = #{edit_email},
+		               ZIP_CODE = #{edit_zip_code},
+		               ADRS = #{edit_adrs},
+		               DTL_ADRS = #{edit_dtl_adrs},
+		<if test="edit_phone_num != '' and edit_phone_num != null">
+		               PHONE_NUM = #{edit_phone_num},
+		</if>
+		               MBL_NUM = #{edit_mbl_num}
+		WHERE EMP_NUM = #{empNum}
+	</update>
+	<select id="getBankList" resultType="hashmap">
+		SELECT BANK_NUM, BANK_NAME
+		FROM BANK
+	</select>
+	<update id="editSlryInfo" parameterType="hashmap">
+		UPDATE SLRY_ACNT SET BANK_NUM = #{edit_bank_name},
+		                     ACNT_NUM = #{edit_acnt_num},
+		                     DPSTR = #{edit_dpstr}
+		<if test="bnkbk_copy_file != '' and bnkbk_copy_file != null">
+		                     , BNKBK_COPY_FILE = #{bnkbk_copy_file}
+		</if>
+		WHERE EMP_NUM = #{empNum}
+	</update>
+	<update id="editBasicInfo" parameterType="hashmap">
+		UPDATE EMP SET EMP_NAME = #{emp_name},
+		               EMP_NAME_ENG = #{emp_name_eng}
+		<if test="emp_pctr_file != '' and emp_pctr_file != null">
+		               , EMP_PCTR_FILE = #{emp_pctr_file}
+		</if>
+		WHERE EMP_NUM = #{empNum}
+	</update>
+	
+	<!--* 인사기록카드 : 추가하기 쿼리 *-->
+	<insert id="addEdctnLevel" parameterType="hashmap">
+		INSERT INTO EDCTN_LEVEL(EDCTN_LEVEL_NUM, EMP_NUM, SCHL_NAME, ADMSN_DATE, GRDTN_DATE, GRADE, SCHL_REGSTR_DVSN, GRDTN_CRTFCT_FILE)
+		VALUES (EDCTN_LEVEL_SEQ.nextval, #{empNum}, #{schl_name}, TO_DATE(#{admsn_date}, 'YYYY-MM-DD'), 
+		<choose>
+			<when test="grdtn_date != '' and grdtn_date != null">
+			   TO_DATE(#{grdtn_date}, 'YYYY-MM-DD'), 
+			</when>
+			<otherwise>
+			   NULL,
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="grade != '' and grade != null">
+			   #{grade}, 
+			</when>
+			<otherwise>
+			   NULL,
+			</otherwise>
+		</choose>
+			   #{schl_regstr_dvsn}, 
+		<choose>
+			<when test="grdtn_crtfct_file != '' and grdtn_crtfct_file != null">
+			   #{grdtn_crtfct_file})
+			</when>
+			<otherwise>
+			   NULL)
+			</otherwise>
+		</choose>
+	</insert>
+ 	<insert id="addCr" parameterType="hashmap">
+		INSERT INTO CR(CR_NUM, EMP_NUM, CMPNY_NAME, JOIN_DATE, RSGNT_DATE, DEPT, PSTN, JOB)
+		VALUES (CR_SEQ.nextval, #{empNum}, #{cmpny_name}, #{join_date}, #{rsgnt_date}, 
+		<choose>
+			<when test="dept != '' and dept != null">
+			   #{dept}, 
+			</when>
+			<otherwise>
+			   NULL,
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="pstn != '' and pstn != null">
+			   #{pstn}, 
+			</when>
+			<otherwise>
+			   NULL,
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="job != '' and job != null">
+			   #{job})
+			</when>
+			<otherwise>
+			   NULL)
+			</otherwise>
+		</choose>
+	</insert>
+	<insert id="addQlfctn" parameterType="hashmap">
+		INSERT INTO LCNS(LCNS_NUM, EMP_NUM, LCNS_NAME, ACQRMNT_DATE, ISSUE_ORGNZT, ACQRMNT_SCORE, EXPRTN_DATE, COPY_FILE)
+		VALUES (LCNS_SEQ.nextval, #{empNum}, #{lcns_name}, #{acqrmnt_date}, #{issue_orgnzt}, 
+		<choose>
+			<when test="acqrmnt_score != '' and acqrmnt_score != null">
+			   #{acqrmnt_score},  
+			</when>
+			<otherwise>
+			   NULL,
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="exprtn_date != '' and exprtn_date != null">
+			   #{exprtn_date}, 
+			</when>
+			<otherwise>
+			   NULL,
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="copy_file != '' and copy_file != null">
+			   #{copy_file})
+			</when>
+			<otherwise>
+			   NULL)
+			</otherwise>
+		</choose>
+	</insert>
+	
+	<!--* 인사기록카드 : 삭제하기 쿼리 *-->
+	<delete id="deleteEdctnLevel" parameterType="hashmap">
+		DELETE FROM EDCTN_LEVEL
+		WHERE EDCTN_LEVEL_NUM = #{selItemNum}
+	</delete>
+	<delete id="deleteCr" parameterType="hashmap">
+		DELETE FROM CR
+		WHERE CR_NUM = #{selItemNum}
+	</delete>
+	<delete id="deleteQlfctn" parameterType="hashmap">
+		DELETE FROM LCNS
+		WHERE LCNS_NUM = #{selItemNum}
+	</delete>
+	
+	<!-- 메뉴 사용 권한 가져오기 -->
+	<select id="getMenuAthrty" parameterType="hashmap" resultType="Integer">
+		SELECT MA.ATHRTY_TYPE_NUM
+			FROM EMP E INNER JOIN MENU_ATHRTY MA
+			                   ON E.ATHRTY_NUM = MA.ATHRTY_NUM
+			WHERE MA.MENU_NUM = #{menuNum}
+			      AND E.EMP_NUM = #{sEmpNum}
+	</select>
+	
+	<!--* 사원조회 : 가져오기 쿼리 *-->
+	<!-- 사원조회 - 사원 수 가져오기 -->
+	<select id="getEmpCount" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM (  SELECT EMP.EMP_NUM, EMP.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, EMP.MBL_NUM, EMP.HIRE_TYPE,
+                       DECODE(A1.START_DATE, NULL, -1, DECODE(A2.END_DATE, NULL, 0, 1)) AS WORK_TYPE,
+                       DECODE(A1.START_DATE, NULL, NULL, TO_CHAR(A1.START_DATE, 'YYYY-MM-DD')) AS JOIN_DATE,
+                       DECODE(A2.END_DATE, NULL, NULL, TO_CHAR(A2.END_DATE, 'YYYY-MM-DD')) AS RSGNT_DATE
+                FROM EMP LEFT OUTER JOIN (  SELECT SQ.START_DATE, SQ.END_DATE, SQ.EMP_NUM
+	                                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+	                                                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE ASC) AS OLDEST
+	                                                FROM APNTM ) SQ
+	                                        WHERE SQ.OLDEST = '1'
+	                                        ) A1
+	                                 ON EMP.EMP_NUM = A1.EMP_NUM
+	                         LEFT OUTER JOIN (   SELECT SQ.START_DATE, SQ.EMP_NUM, SQ.RANK_NUM, SQ.DEPT_NUM,
+	                                               CASE WHEN SQ.END_DATE > SYSDATE
+	                                                    THEN NULL
+	                                                    ELSE SQ.END_DATE
+	                                               END AS END_DATE
+	                                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+	                                                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE DESC) AS NEWEST
+	                                                FROM APNTM ) SQ
+	                                        WHERE SQ.NEWEST = '1'
+	                                            ) A2
+	                                 ON EMP.EMP_NUM = A2.EMP_NUM
+	                         LEFT OUTER JOIN RANK R
+	                                 ON A2.RANK_NUM = R.RANK_NUM
+	                         LEFT OUTER JOIN (  SELECT DEPT_NUM, DEPT_NAME, DEL_CHECK
+	                                            FROM DEPT
+	                                            WHERE DEL_CHECK = 1
+	                                            ) D
+	                                      ON A2.DEPT_NUM = D.DEPT_NUM
+		        ) S
+		WHERE 1 = 1
+		<if test="srch_txt != '' and srch_txt != null">
+			<choose>
+				<when test="srch_sel == -1">
+					  AND ((S.EMP_NUM LIKE '%' || #{srch_txt} || '%') OR (S.EMP_NAME LIKE '%' || #{srch_txt} || '%') OR (S.DEPT_NAME LIKE '%' || #{srch_txt} || '%'))
+				</when>
+				<when test="srch_sel == 0">
+		              AND S.EMP_NUM LIKE '%' || #{srch_txt} || '%'
+		        </when>
+				<when test="srch_sel == 1">
+		              AND S.EMP_NAME LIKE '%' || #{srch_txt} || '%'
+		        </when>
+				<when test="srch_sel == 2">
+		              AND S.DEPT_NAME LIKE '%' || #{srch_txt} || '%'
+		        </when>
+			</choose>
+		</if>
+		<if test="work_clsftn != -1">
+	              AND S.WORK_TYPE = #{work_clsftn}
+	    </if>
+		<if  test="emplynt_type != -1">
+	              AND S.HIRE_TYPE = #{emplynt_type}
+	    </if>
+		<if test="join_date != -1">
+			<choose>
+				<when test="prd_start != '' and prd_end != ''">
+	            	AND S.JOIN_DATE BETWEEN TO_DATE(#{prd_start}, 'YYYY-MM-DD') AND TO_DATE(#{prd_end}, 'YYYY-MM-DD')
+				</when>
+				<when test="prd_start != '' and prd_end == ''">
+					AND S.JOIN_DATE <![CDATA[>=]]> TO_DATE(#{prd_start}, 'YYYY-MM-DD')
+				</when>
+				<when test="prd_start == '' and prd_end != ''">
+					AND S.JOIN_DATE <![CDATA[<=]]> TO_DATE(#{prd_end}, 'YYYY-MM-DD')
+				</when>
+	        </choose>
+	    </if>
+	</select>
+	<!-- 사원조회 - 사원목록 가져오기 -->
+	<select id="getEmpList" parameterType="hashmap" resultType="hashmap">
+		SELECT E.EMP_NUM, E.EMP_NAME, E.DEPT_NAME, E.RANK_NAME, E.MBL_NUM, E.HIRE_TYPE, E.WORK_TYPE, E.JOIN_DATE, E.RSGNT_DATE
+		FROM (  SELECT S.EMP_NUM, S.EMP_NAME, S.DEPT_NAME, S.RANK_NAME, S.MBL_NUM, S.HIRE_TYPE, S.WORK_TYPE, S.JOIN_DATE, S.RSGNT_DATE,
+		               ROW_NUMBER() OVER(ORDER BY S.EMP_NUM) AS RN
+		        FROM (  SELECT EMP.EMP_NUM, EMP.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, EMP.MBL_NUM, EMP.HIRE_TYPE,
+		                       DECODE(A1.START_DATE, NULL, -1, DECODE(A2.END_DATE, NULL, 0, 1)) AS WORK_TYPE,
+		                       DECODE(A1.START_DATE, NULL, NULL, TO_CHAR(A1.START_DATE, 'YYYY-MM-DD')) AS JOIN_DATE,
+		                       DECODE(A2.END_DATE, NULL, NULL, TO_CHAR(A2.END_DATE, 'YYYY-MM-DD')) AS RSGNT_DATE
+		                FROM EMP LEFT OUTER JOIN (   SELECT SQ.START_DATE, SQ.END_DATE, SQ.EMP_NUM
+		                                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+		                                                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE ASC) AS OLDEST
+		                                                FROM APNTM
+		                                                WHERE STS_NUM = '1'
+		                                                 ) SQ
+		                                        WHERE SQ.OLDEST = '1'
+		                                        ) A1
+		                                 ON EMP.EMP_NUM = A1.EMP_NUM
+		                         LEFT OUTER JOIN (   SELECT SQ.START_DATE, SQ.EMP_NUM, SQ.RANK_NUM, SQ.DEPT_NUM,
+		                                               CASE WHEN SQ.END_DATE > SYSDATE
+		                                                    THEN NULL
+		                                                    ELSE SQ.END_DATE
+		                                               END AS END_DATE
+		                                        FROM (  SELECT EMP_NUM, START_DATE, END_DATE, RANK_NUM, DEPT_NUM,
+		                                                       ROW_NUMBER() OVER(PARTITION BY EMP_NUM ORDER BY START_DATE DESC) AS NEWEST
+		                                                FROM APNTM
+		                                                WHERE STS_NUM = '1'
+		                                                 ) SQ
+		                                        WHERE SQ.NEWEST = '1'
+		                                            ) A2
+		                                 ON EMP.EMP_NUM = A2.EMP_NUM
+		                         LEFT OUTER JOIN RANK R
+		                                 ON A2.RANK_NUM = R.RANK_NUM
+		                         LEFT OUTER JOIN (  SELECT DEPT_NUM, DEPT_NAME, DEL_CHECK
+		                                            FROM DEPT
+		                                            WHERE DEL_CHECK = 1
+		                                            ) D
+		                                      ON A2.DEPT_NUM = D.DEPT_NUM
+		                ) S
+		        WHERE 1 = 1
+		<if test="srch_txt != '' and srch_txt != null">
+			<choose>
+				<when test="srch_sel == -1">
+					  AND ((S.EMP_NUM LIKE '%' || #{srch_txt} || '%') OR (S.EMP_NAME LIKE '%' || #{srch_txt} || '%') OR (S.DEPT_NAME LIKE '%' || #{srch_txt} || '%'))
+				</when>
+				<when test="srch_sel == 0">
+		              AND S.EMP_NUM LIKE '%' || #{srch_txt} || '%'
+		        </when>
+				<when test="srch_sel == 1">
+		              AND S.EMP_NAME LIKE '%' || #{srch_txt} || '%'
+		        </when>
+				<when test="srch_sel == 2">
+		              AND S.DEPT_NAME LIKE '%' || #{srch_txt} || '%'
+		        </when>
+			</choose>
+		</if>
+		<if test="work_clsftn != -1">
+	              AND S.WORK_TYPE = #{work_clsftn}
+	    </if>
+		<if  test="emplynt_type != -1">
+	              AND S.HIRE_TYPE = #{emplynt_type}
+	    </if>
+		<if test="join_date != -1">
+			<choose>
+				<when test="prd_start != '' and prd_end != ''">
+	            	AND S.JOIN_DATE BETWEEN TO_DATE(#{prd_start}, 'YYYY-MM-DD') AND TO_DATE(#{prd_end}, 'YYYY-MM-DD')
+				</when>
+				<when test="prd_start != '' and prd_end == ''">
+					AND S.JOIN_DATE <![CDATA[>=]]> TO_DATE(#{prd_start}, 'YYYY-MM-DD')
+				</when>
+				<when test="prd_start == '' and prd_end != ''">
+					AND S.JOIN_DATE <![CDATA[<=]]> TO_DATE(#{prd_end}, 'YYYY-MM-DD')
+				</when>
+	        </choose>
+	    </if>
+		        ) E
+		WHERE E.RN BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!--* 사원조회 : 추가하기 쿼리 *-->
+	<insert id="addEmp" parameterType="hashmap">
+		INSERT INTO EMP(EMP_NUM, PW, EMP_NAME, EMP_NAME_ENG, EMP_PCTR_FILE, BRTHDT, GNDR, EMAIL, ZIP_CODE, ADRS, DTL_ADRS, PHONE_NUM, MBL_NUM, HIRE_TYPE, ATHRTY_NUM)
+		VALUES (TO_NUMBER(CONCAT(TO_CHAR(SYSDATE, 'YYYY'), TO_CHAR(LPAD(EMP_SEQ.NEXTVAL, 6, '0')))), <!-- 사원번호 생성 -->
+		        #{temp_pw}, <!-- 비밀번호 -->
+		        #{emp_name}, #{emp_name_eng},  <!-- 사원명, 사원영문명 -->
+		<choose>
+			<when test="emp_pctr_file != '' and emp_pctr_file != null">
+		        #{emp_pctr_file},  <!-- 사원사진 -->
+		    </when>
+		    <otherwise>
+		    	NULL, 
+		    </otherwise>
+		</choose>
+		        #{brthdt}, #{gndr}, #{email}, #{zip_code}, #{adrs}, #{dtl_adrs}, <!-- 생년월일, 성별, 이메일, 우편번호, 주소, 상세주소 -->
+		        
+		<choose>
+			<when test="phone_num != '' and phone_num != null">
+		        #{phone_num}, <!-- 전화번호 -->
+		    </when>
+		    <otherwise>
+		    	NULL, 
+		    </otherwise>
+		</choose>
+		        #{mbl_num}, #{hire_type}, '19')  <!-- 휴대폰번호, 고용형태, 권한번호 -->
+		
+		<selectKey keyProperty="newEmpNum" resultType="Integer" order="AFTER">
+			SELECT TO_NUMBER(CONCAT(TO_CHAR(SYSDATE, 'YYYY'), TO_CHAR(LPAD(EMP_SEQ.CURRVAL, 6, '0')))) AS N_EMP_NUM
+			FROM DUAL
+		</selectKey>
+	</insert>
+	<insert id="addSlryAcnt" parameterType="hashmap">
+		INSERT INTO SLRY_ACNT(SLRY_ACNT_NUM, BANK_NUM, EMP_NUM, ACNT_NUM, DPSTR, BNKBK_COPY_FILE)
+		VALUES (SLRY_ACNT_SEQ.NEXTVAL, #{bank_num}, #{newEmpNum}, #{acnt_num}, #{dpstr}, 
+		<choose>
+			<when test="bnkbk_copy_file != '' and bnkbk_copy_file != null">
+		        #{bnkbk_copy_file})
+		    </when>
+		    <otherwise>
+		    	NULL)
+		    </otherwise>
+		</choose>
+	</insert>
+	<select id="getNewEmpInfo" parameterType="hashmap" resultType="hashmap">
+		SELECT EMP_NUM, EMP_NAME, EMP_NAME_ENG, TO_CHAR(BRTHDT, 'YYYY-MM-DD') AS BRTHDT, GNDR
+		FROM EMP
+		WHERE EMP_NUM = #{newEmpNum}
+	</select>
+	
+	<!--* 사원조회 : 삭제하기 쿼리 *-->
+	<select id="delApntmCount" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM EMP E INNER JOIN APNTM A
+		                   ON E.EMP_NUM = A.EMP_NUM
+		WHERE E.EMP_NUM = #{empNum}
+	</select>
+	<select id="delEdctnLevelCount" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM EDCTN_LEVEL
+		WHERE EMP_NUM = #{empNum}
+	</select>
+	<select id="delCrCount" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM CR
+		WHERE EMP_NUM = #{empNum}
+	</select>
+	<select id="delQlfctnCount" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM LCNS
+		WHERE EMP_NUM = #{empNum}
+	</select>
+	
+	<delete id="delEdctnLevel" parameterType="hashmap">
+		DELETE FROM EDCTN_LEVEL
+		WHERE EMP_NUM = #{empNum}
+	</delete>
+	<delete id="delCr" parameterType="hashmap">
+		DELETE FROM CR
+		WHERE EMP_NUM = #{empNum}
+	</delete>
+	<delete id="delQlfctn" parameterType="hashmap">
+		DELETE FROM LCNS
+		WHERE EMP_NUM = #{empNum}
+	</delete>
+	<delete id="delSlryAcnt" parameterType="hashmap">
+		DELETE FROM SLRY_ACNT
+		WHERE EMP_NUM = #{empNum}
+	</delete>
+	<delete id="delEmp" parameterType="hashmap">
+		DELETE FROM EMP
+		WHERE EMP_NUM = #{empNum}
+	</delete>
+</mapper>

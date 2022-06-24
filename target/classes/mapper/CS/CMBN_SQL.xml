@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cm">
+
+<select id="getGuideCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM CMBN_INFO C INNER JOIN EMP E
+                        ON C.EMP_NUM = E.EMP_NUM
+                        WHERE DEL_CHECK =1
+	<if test="searchTxt != null and searchTxt != ''">
+		<choose>
+		<!-- searchGbn: 제목, 작성자 -->
+			<when test="searchGbn == 0">
+				AND C.CMBN_TITLE LIKE '%' || #{searchTxt} || '%'
+			</when>
+			<when test="searchGbn == 1">
+				AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+			</when>
+		</choose>
+	</if>
+</select>
+
+<select id="getStrgCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM CMBN_INFO C INNER JOIN EMP E
+                        ON C.EMP_NUM = E.EMP_NUM
+                        WHERE DEL_CHECK =0
+	<if test="searchTxt != null and searchTxt != ''">
+		<choose>
+		<!-- searchGbn: 제목, 작성자 -->
+			<when test="searchGbn == 0">
+				AND C.CMBN_TITLE LIKE '%' || #{searchTxt} || '%'
+			</when>
+			<when test="searchGbn == 1">
+				AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+			</when>
+		</choose>
+	</if>
+</select>
+
+<select id="getStrg" parameterType="hashmap" resultType="hashmap">
+SELECT C.BOARD_NUM, C.CMBN_TITLE, C.CMBN_CONT,C.EMP_NAME, C.WRITE_DATE,C.CMBN_HITS
+FROM(SELECT C.BOARD_NUM, C.CMBN_TITLE, C.CMBN_CONT,E.EMP_NAME, C.WRITE_DATE,C.CMBN_HITS,C.RNUM
+FROM(SELECT BOARD_NUM, CMBN_TITLE ,CMBN_CONT, EMP_NUM, CMBN_HITS,
+         TO_CHAR(WRITE_DATE,'YYYY-MM-DD') AS WRITE_DATE, 
+        ROW_NUMBER() OVER(ORDER BY BOARD_NUM DESC) AS RNUM
+ FROM CMBN_INFO 
+ WHERE DEL_CHECK = 0
+ )C LEFT OUTER JOIN EMP E
+                ON C.EMP_NUM = E.EMP_NUM
+                WHERE 1=1
+       <if test="searchTxt != null and searchTxt != ''">
+			<choose>
+			<!-- searchGbn: 제목, 작성자 -->
+				<when test="searchGbn == 0">
+				AND C.CMBN_TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 1">
+				AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+	   </if>
+) C
+WHERE C.RNUM BETWEEN #{strgstartCount} AND #{strgendCount}
+</select>
+
+<select id="getGuide" parameterType="hashmap" resultType="hashmap">
+SELECT C.BOARD_NUM, C.CMBN_TITLE, C.CMBN_CONT,C.EMP_NAME, C.WRITE_DATE,C.CMBN_HITS
+FROM(SELECT C.BOARD_NUM, C.CMBN_TITLE, C.CMBN_CONT,E.EMP_NAME, C.WRITE_DATE,C.CMBN_HITS,C.RNUM
+FROM(SELECT BOARD_NUM, CMBN_TITLE ,CMBN_CONT, EMP_NUM, CMBN_HITS,
+         TO_CHAR(WRITE_DATE,'YYYY-MM-DD') AS WRITE_DATE, 
+        ROW_NUMBER() OVER(ORDER BY BOARD_NUM DESC) AS RNUM
+ FROM CMBN_INFO 
+ WHERE DEL_CHECK = 1
+ )C LEFT OUTER JOIN EMP E
+                ON C.EMP_NUM = E.EMP_NUM
+                WHERE 1=1
+ 	<if test="searchTxt != null and searchTxt != ''">
+		<choose>
+		<!-- searchGbn: 제목, 작성자 -->
+			<when test="searchGbn == 0">
+				AND C.CMBN_TITLE LIKE '%' || #{searchTxt} || '%'
+			</when>
+			<when test="searchGbn == 1">
+				AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+			</when>
+		</choose>
+	</if>
+ ) C
+WHERE C.RNUM BETWEEN #{startCount} AND #{endCount}
+</select>
+
+<select id="getaGuide" parameterType="hashmap" resultType="hashmap">
+SELECT C.BOARD_NUM, C.CMBN_TITLE, C.CMBN_CONT, E.EMP_NAME, C.DEL_CHECK
+FROM CMBN_INFO C INNER JOIN EMP E
+                 ON C.EMP_NUM = E.EMP_NUM
+WHERE BOARD_NUM =#{no}
+</select>
+
+<insert id="guideAdd" parameterType="hashmap">
+INSERT INTO CMBN_INFO( BOARD_NUM, CMBN_TITLE, CMBN_CONT , WRITE_DATE, EMP_NUM, DEL_CHECK, CMBN_HITS)
+VALUES(CMBN_INFO_SEQ.NEXTVAL, #{title} , #{content} , SYSDATE, #{writer},1, 0 )
+</insert>
+
+<update id="guideDel" parameterType="hashmap">
+UPDATE CMBN_INFO SET DEL_CHECK = 0
+WHERE BOARD_NUM=#{no}
+</update>
+
+<update id="guideUpdate" parameterType="hashmap">
+UPDATE CMBN_INFO SET CMBN_TITLE=#{title}, CMBN_CONT=#{content}
+WHERE BOARD_NUM=#{no}
+</update>
+
+<update id="guideStrg" parameterType="hashmap">
+UPDATE CMBN_INFO SET DEL_CHECK = 1 ,CMBN_HITS=0
+WHERE BOARD_NUM=#{no}
+</update>
+
+<update id="updateHit" parameterType="hashmap">
+		UPDATE CMBN_INFO SET  CMBN_HITS= CMBN_HITS + 1
+		WHERE BOARD_NUM = #{no}
+	</update>
+</mapper>

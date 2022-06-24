@@ -1,0 +1,321 @@
+@charset "UTF-8";
+
+/* 가로 사이즈 조정용 */
+.cont_wrap {
+	width: 1013px;;
+}
+input[type="text"], #ccGrade, #rp {
+	font-size: 9pt;
+}
+.body {
+	display: block;
+	background-color: white;
+	width: 1013px;
+	height: 100%;
+	margin: auto;
+}
+.bodyWrap {
+	display: block;
+	background-color: white;
+	width: 927px;
+	height: 100%;
+	margin: 40px auto;
+}
+
+/* 개인 작업 영역 */
+table{
+	
+	border: 1px;
+	width: 927px;
+	margin: 40px auto;
+}
+td:nth-child(2), td:nth-child(4){
+	border-bottom: 1px solid #d7d7d7;
+}
+tr:nth-child(10) td{
+	border-bottom: 1px solid #d7d7d7;
+}
+tr:nth-child(9) td:nth-child(1){
+	height: 66px;
+}
+td:nth-child(1) {
+	text-align: center;
+}
+tr:nth-child(7) {
+	border: none;
+}
+.btn{
+	width : 90px;
+	height: 40px;
+	text-align: center;
+	margin-left: 10px;
+}
+.address{
+	width : 90px;
+	height: 100px;
+}
+.btn, .address{
+	background-color: #fff;
+	border-radius: 3px;
+	font-weight: bold;
+	font-size: 14px;
+	width: 150px;
+	border: none;
+}
+.plus_btn, .btnImg:hover{
+	cursor: pointer;
+}
+
+#fileName {
+	border: hidden;
+	outline: none;
+	width: 500px;
+}
+#leadFileName {
+	border: hidden;
+	outline: none;
+	width: 500px;
+}
+.txt{
+	height: 33px;
+	width: 90%;
+	padding: 0 5px;
+	font-size: 12px;
+	color: black;
+	vertical-align: middle;
+	box-sizing: border-box;
+	outline: none;
+	border-radius: 3px;
+	line-height: 33px;
+	border: none;
+}
+.rvn_txt {
+	height: 33px;
+	width: 885px;
+	padding: 0 15px;
+	font-size: 14px;
+	color: black;
+	box-sizing: border-box;
+	outline: none;
+	border-radius: 3px;
+	line-height: 33px;
+	border: 1px solid #d7d7d7;
+	background-color: #F2F2F2;
+	text-align: left;
+	font-weight: bold;
+	margin-left: 40px;
+	margin-bottom: 5px;
+}
+.txt_in{
+	height: 33px;
+	width: 100%;
+	padding: 0 5px;
+	font-size: 10.5px;
+	color: black;
+	vertical-align: middle;
+	box-sizing: border-box;
+	outline: none;
+	border-radius: 3px;
+	line-height: 33px;
+	border: none;
+}
+.cntrct_box_in {
+	width: 885px;
+	height: 150px;
+	border: 1px solid #d7d7d7;
+	border-radius: 7px;
+	margin-bottom: 18px;
+	margin-left: 40px;
+}
+.btnImg{
+	width : 30px;
+	float: right;
+	margin-left: 10px;
+}
+.btnImg_in{
+	display: inline-block;
+	vertical-align: middle;
+	width: 25px;
+	height: 25px;
+	float: right;
+	cursor: pointer;
+	margin-right: 5px;
+}
+.plus_btn {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-image: url("resources/images/sales/plus.png");
+	background-size: 18px 18px;
+	float: right;
+	margin-right: 5px;
+	margin-top: 5.5px;	
+}
+.imgPos{
+	text-align: right;
+}
+.imgPos_in{
+	text-align: right;
+	background-color: #f2f2f2;
+}
+#ccImg:hover, #userImg:hover {
+	cursor: pointer;
+}
+/* 예정된 일정 */
+.mgtop {
+	margin-top: 50px;
+}
+hr { /* 구분선 */
+	margin-bottom: 10px;
+}
+.bot_title { 
+	font-size: 11pt;
+}
+.bx { /* 스크롤때문에 div 박스 추가 */
+	width: 860px;
+	height: 305px;
+	margin-left: 47.5px;
+	overflow-y: auto;
+}
+.OpinionBox {
+	width: 830px;
+	height: 70px;
+	font-size: 10pt;
+	border: 1px solid gray;
+	border-top-left-radius: 12px;
+	border-top-right-radius: 12px;
+	border-bottom-left-radius: 12px;
+	border-bottom-right-radius: 12px;
+	margin-bottom: 5px;
+	background-color: #F2F2F2;
+}
+.name {
+	margin-top: 3px;
+	font-weight: bold;
+	padding-top: 5px;
+	padding-left: 20px;
+}
+.txtOp, .dt {
+	padding-left: 20px;
+}
+.dt {
+	display: inline-block;
+	vertical-align: top;
+	font-size: 9pt;
+	padding-right: 590px;
+	color: gray;
+}
+.drop_btn {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-image: url("resources/images/sales/downarrow.png");
+	background-size: 18px 18px;
+	float: right;
+	margin-top: 7.5px;
+}
+.plus_btn {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-image: url("resources/images/sales/plus.png");
+	background-size: 18px 18px;
+	float: right;
+	margin-top: 7.5px;
+	margin-right: 20px;
+}
+.up_btn {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-image: url("resources/images/sales/up_arrow.png");
+	background-size: 18px 18px;
+	float: right;
+	margin-top: 7.5px;
+}
+.drop_btn:hover, .plus_btn:hover, .up_btn:hover {
+	cursor: pointer;
+}
+/* 예정된 일정  */
+.sche {
+	display: inline-block;
+	width: 696.5px;
+}
+.sch_re, .sch_del {
+	font-size: 9pt;
+	color: gray;
+}
+.sch_re:hover, .sch_del:hover {
+	cursor: pointer;
+	color: #F2CB05;
+}
+/* 첨부자료 */
+.cntrct_box_in {
+	width: 885px;
+	height: 100px;
+	border: 1px solid #d7d7d7;
+	border-radius: 7px;
+	margin-bottom: 18px;
+	margin-left: 40px;
+}
+.plus_btn {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-image: url("resources/images/sales/plus.png");
+	background-size: 18px 18px;
+	float: right;
+	margin-right: 5px;
+	margin-top: 5.5px;
+	
+}
+.plus_btn_bot {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-image: url("resources/images/sales/plus.png");
+	background-size: 18px 18px;
+	float: right;
+	margin-right: 7px;
+	margin-top: 7.5px;
+}
+.plus_btn_bot:hover {
+	cursor: pointer;
+}
+#attFileName {
+	font-size: 10pt;
+}
+#percent {
+	font-size: 10pt;
+	display: inline-block;
+	vertical-align: middle;
+	font-weight: bold;
+	margin-bottom: 5px;
+}
+#userIcon {
+	margin-top: 5px;
+}
+.mngTxt {
+	height: 33px;
+	width: 85%;
+	padding: 0 5px;
+	font-size: 12px;
+	color: black;
+	vertical-align: middle;
+	box-sizing: border-box;
+	outline: none;
+	border-radius: 3px;
+	line-height: 33px;
+	border: none;	
+}
+#a {
+	color : red;
+	font-size: 9pt;
+	display : none;
+}

@@ -1,0 +1,299 @@
+@charset "UTF-8";
+/* 가로 사이즈 조정용 */
+.cont_wrap {
+	width: 1013px;
+}
+.body {
+	display: block;
+	background-color: white;
+	width: 1013px;
+	height: 100%;
+	margin: auto;
+}
+
+.bodyWrap {
+	display: block;
+	background-color: white;
+	width: 927px;
+	height: 100%;
+	margin: 40px auto;
+}
+
+/********** div 큰 영역  **********/
+.new_sales_actvty, .new_sales_actvty1 {
+	display: inline-block;
+	vertical-align: top;
+	width: 430px;
+	height: 260px;
+	margin-bottom: 30px; 
+}
+.sales_text_bot, .cc_text_bot {
+	width: 428px;
+	height: 200px;
+	/* border: 1px solid #000; */
+	border: none;
+	margin-top: 10px;
+	font-size: 11pt;
+	position: relative;
+}
+.sales_text_bot2{
+	width: 927px;
+	height: 240px;
+	/* border: 1px solid #000; */
+	border: none;
+	margin-top: 10px;
+	font-size: 11pt;
+	position: relative;
+}
+/* ************* 신규고객 CSS ************* */
+.mhPos {
+	display: inline-block;
+	vertical-align: top;	
+	width: 428px;
+	height: 30px;
+	margin-top: 5px;
+}
+.mhTxt {
+	display: inline-block;
+	vertical-align: top;
+	width: 80px;
+	height: 30px;
+	font-size: 9pt;
+	font-weight: bold;
+	text-align: center;
+	color: #7b7b7b;
+}
+.cc {
+	position: absolute;
+	top: 35px;
+	left: 10px;
+	background-color: #F2B705;
+}
+.clnt {
+	position: absolute;
+	top: 90px;
+	left: 10px;
+	background-color: #F2CB05;
+}
+.ccTxt {
+	display: inline-block;
+	vertical-align: top;
+	width: 60px;
+	height: 30px;
+	font-size: 10pt;
+	font-weight: bold;
+	color: white; 
+	text-align: center;
+	line-height: 30px;
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	margin: 10px 0px 10px 5px;
+}
+.chartData {
+	width: 375px;
+	height: 50px;
+	display: inline-block;
+	vertical-align: top;
+	background-color: #F2F2F2;
+	margin: 0px 10px 5px 0px;
+	float: right; 
+}
+.ccMonth {
+	display: inline-block;
+	vertical-align: middle;
+	height: 50px;
+	line-height: 50px;
+	font-size: 12pt;
+	font-weight: bold;
+	color: #7b7b7b;
+	text-align: center;
+}
+.ago {
+	width: 80px;
+	margin-left: 42px;
+}
+.mon {
+	width: 84px;
+}
+.all {
+	width: 65px;
+}
+/* ************* 신규고객 CSS 끝 ************* */
+.cont_right {
+	display: inline-block;
+	vertical-align: top;
+	width: 430px;
+	height: 100%;
+	padding-right: 33.5px;	
+}
+.cont_left {
+	display: inline-block;
+	vertical-align: top;
+	width: 430px;
+	height: 100%;
+	padding-left: 33.5px;	
+}
+/********** 검색 영역 **********/
+.srch_table {
+	border-collapse: collapse;
+	background-color: #f2f2f2;
+	width: 100%;
+	font-size: 10.5pt;
+	text-align: left;
+	margin: 10px 0px 50px 0;
+	border-top: 1.5px solid #4B94F2;
+}
+.srch_table tr:nth-child(2) {
+	border-bottom: 2.5px solid #d7d7d7;
+}
+.srch_table tr {
+	height: 40px;
+}
+.srch_table td {
+	padding: 10px 0px;
+}
+select {
+	height: 24px;
+	width: 185.98px;
+	font-size: 12px;
+}
+
+.srch_name {
+	margin: 0px 10px 0px 10px;
+	font-weight: bold;
+}
+td:nth-child(1), td:nth-child(3), td:nth-child(5) {
+	text-align: center;
+}
+.tMonth {
+	width: 180px;
+	height: 20px;
+	font-family: "맑은 고딕";
+}
+.srch_msg {
+	height: 20px;
+	width: 305px;
+	font-size: 12px;
+}
+/* 직원검색 */
+.findEmp_box {
+	background-color: white;
+	border : 1px solid #858585;
+	height: 18px;
+	width: 180px;
+	border-radius : 1px;
+	padding: 2px;
+}
+.findEmp_box2 {
+	background-color: white;
+	display:inline-block;
+	vertical-align:top;
+	height: 18px;
+	width: 150px;
+	margin: 0px;
+	padding: 0px;	
+}
+input:focus {
+	outline:none;
+}
+.findEmp_box:hover {
+	cursor: pointer;
+}
+.userIcon{
+	width: 18px;
+	height: 18px;
+	display: inline-block;
+	vertical-align: middle;
+	background-size: 18px 18px;
+	background-repeat: no-repeat;
+	padding-bottom: 5px;
+}
+.asc_btn {
+	width: 30px;
+	height: 25px;
+}
+.asc_btn:hover {
+	cursor: pointer;
+}
+/********** 제목 영역 **********/
+.sales_text, .img_rect {
+	display: inline-block;
+	vertical-align: top;
+	font-size: 11pt;
+	font-weight: bold;
+	color: #7b7b7b;
+}
+
+.sales_text {
+	width: 100%;
+}
+
+.sales_text_top {
+	display: inline-block;
+	padding: 5px 0px;
+}
+
+/* 파란 줄 */
+.actvty_tLine1 {
+	background-color: #4B94F2;
+	width: 100%;
+	height: 2px;
+}
+.actvty_tLine2 {
+	background-color: #4B94F2;
+	width: 927px;
+	height: 2px;
+}
+/* 네모 이미지 */
+.img_rect {
+	width: 12px;
+	height: 12px;
+	padding-top: 4px;
+	margin-right: 10px;
+	margin-left: 10px;
+}
+#pie-chart {
+	width: 428px;
+	height: 250px;
+}
+#bar-chart {
+	width: 927px;
+	height: 260px;
+}
+#datatable {
+    font-family: Verdana, sans-serif;
+    border-collapse: collapse;
+    border: 1px solid #ebebeb;
+    margin: 10px auto;
+    text-align: center;
+    width: 100%;
+    max-width: 500px;
+}
+
+#datatable caption {
+    padding: 1em 0;
+    font-size: 1.2em;
+    color: #555;
+}
+
+#datatable th {
+    font-weight: 600;
+    padding: 0.5em;
+}
+
+#datatable td,
+#datatable th,
+#datatable caption {
+    padding: 0.5em;
+}
+
+#datatable thead tr,
+#datatable tr:nth-child(even) {
+    background: #f8f8f8;
+}
+
+#datatable tr:hover {
+    background: #f1f7ff;
+}

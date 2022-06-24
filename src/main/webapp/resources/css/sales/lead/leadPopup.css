@@ -1,0 +1,274 @@
+@charset "UTF-8";
+/* 팝업 조회영역 */
+.popup_title_mid {
+	width: calc(100% + 20px);
+    height: 70px;
+    margin: -10px 0px 0px -10px;
+	background-color: #F2F2F2;
+	font-size: 11pt;
+	padding-bottom: 3px;
+	border-bottom: 1px solid #d7d7d7;
+}
+/* 고객사 조회 팝업 */
+.ptm_left {
+	display: inline-block;
+	vertical-align: top;
+	width: 100px;
+	height: 70px;
+}
+/* 고객 조회 팝업 */
+.ptm_left2 {
+	display: inline-block;
+	vertical-align: top;
+	width: 100px;
+	height: 50px;
+	margin-top: 20px;
+}
+.ptm_left_top, .ptm_left_bot {
+	width: 100px;
+	height: 35px;
+	line-height: 35px;
+	text-align: right;
+	font-size: 15px;
+	font-weight: bold;
+}
+.ptm_right_bot {
+	width: 94px;
+	height: 32px;
+	margin-top: 5px;
+	text-align: center;
+}
+.ptm_right_bot2, .ptm_right_top2 {
+	width: 94px;
+    height: 32px;
+    margin-top: 5px;
+    text-align: center;
+}
+.ptm_mid {
+	display: inline-block;
+	vertical-align: top;
+	width: 150px;
+	height: 70px;
+}
+/* 검색어 입력 box */
+.ptm_mid2 {
+	display: inline-block;
+	vertical-align: top;
+	width: 150px;
+	height: 50px;
+	margin-top: 20px;
+}
+.ptm_mid_top, .ptm_mid_bot {
+	width: 150px;
+	height: 35px;
+	line-height: 35px;
+	text-align: center;
+}
+.sel_size {
+	width: 130px;
+	height: 25px;
+	outline: none;
+}
+.ptm_mid_right {
+	display: inline-block;
+	vertical-align: top;
+	width: 240px;
+	height: 70px;
+}
+.ptm_mid_right_top, .ptm_mid_right_bot {
+	width: 240px;
+	height: 35px;
+	line-height: 35px;
+	text-align: center;
+}
+.text_size {
+	width: 200px;
+	height: 19px;
+	outline: none;
+}
+.text_size1 {
+	width: 123px;
+	height: 19px;
+	outline: none;
+}
+.text_size2 {
+	width: 300px;
+	height: 19px;
+	margin-left : 10px;
+	outline: none;
+}
+.ptm_right {
+	display: inline-block;
+	vertical-align: top;
+	width: 94px;
+	height: 100%;
+}
+.ptm_right2 {
+	display: inline-block;
+	vertical-align: top;
+	width: 94px;
+	height: 50px;
+	margin-top: 20px;
+}
+.ptm_right_top {
+	width: 94px;
+	height: 32px;
+	text-align: center;
+}
+
+/* 팝업 내용 */
+.popup_cc_box_left {
+   display: inline-block;
+   vertical-align: top;
+   width: 120px;
+   height: 50px;
+}
+.popup_cc_box_right {
+   display: inline-block;
+   width: 300px;
+   height: 50px;
+   font-size: 14px;
+   line-height: 50px;
+}
+/* 고객사 조회 내용  */
+.popup_cc_box_right2 {
+   display: inline-block;
+   width: 400px;
+   height: 50px;
+   margin: 0px;
+   font-size: 0px;
+}
+/* 고객 조회 내용 */
+.popup_cc_box_right3 {
+   display: inline-block;
+   width: 400px;
+   height: 50px;
+   font-size: 14px;
+}
+.popup_box_in {
+   width: calc(100% - 4px);
+   height: 50px;
+   border: 2px solid #d7d7d7;
+   border-radius: 3px;
+   background-color: #F2F2F2;
+   margin-bottom: 5px;
+}
+.popup_box_in:hover {
+   cursor: pointer;
+   border: 2px solid #2E83F2;
+}
+.company {
+   display: inline-block;
+   width: 25px;
+   height: 25px;
+   background-size: 25px 25px;
+   background-repeat: no-repeat;
+   margin-top: 13px;
+   margin-left: 45px;
+}
+.boldname{
+	margin-left: 30px;
+	font-weight: bold;
+}
+.boldname2 {
+	font-weight: bold;
+	font-size : 12px;
+	padding: 0px;
+}
+.boldname3 {
+	font-weight: bold;
+	font-size : 12px;
+	margin-top: 10px;
+	display: inline-block;
+	vertical-align: top;
+}
+.mg_wid {
+	margin-left: 50px;
+}
+/* 팝업 내용 배경색 */
+.pc_back {
+	background-color: #fff;
+}
+
+/* 팝업 페이징 */
+.board_bottom2 {
+	height: 30px;
+	position: relative;
+	text-align: right;
+	background-color: #fff;
+	padding: 5px 0px;
+}
+/* 고객 추가 팝업 */
+.btn2 {
+	width : 90px;
+	height: 40px;
+	font-weight: bold;
+	font-size: 14px;
+	text-align: center;
+	line-height: 40px;
+	display: inline-block;
+	vertical-align: top;
+}
+.txt2 {
+	height: 30px;
+	width: 450px;
+	margin: 7px 5px 3px 5px;
+	font-size: 10.5px;
+	color: black;
+	display: inline-block;
+	vertical-align: middle;
+	box-sizing: border-box;
+	outline: none;
+	line-height: 30px;
+	border-bottom: 1px solid #d7d7d7;
+}
+.txt3 {
+	height: 25px;
+	width: 400px;
+	font-size: 12px;
+	display: inline-block;
+	vertical-align: middle;
+	box-sizing: border-box;
+	outline: none;
+	line-height: 30px;
+	margin: 0px;
+	padding: 0px;
+	border : none;
+}
+.btnImg2 {
+	width : 20px;
+	height: 20px;
+	text-align: right;
+	margin-left: 25px;
+	background-size: 20px 20px;
+}
+.btnImg3 {
+	width : 15px;
+	height: 15px;
+	text-align: right;
+	margin-left: 5px;
+	background-size: 15px 15px;
+}
+.imgPos2 {
+	display: inline-block;
+	vertical-align: middle;
+}
+.popup_cont2 {
+	/* 내용 변경용 */
+	font-size: 13pt;
+	font-weight: 600;
+	text-align: center;
+	line-height: 80px;
+}
+/* 대출한도, 이자율, 판매상태 */
+.adrs_name {
+	/* font-weight: bold; */
+	font-size: 12px;
+	margin: 0px;
+}
+.clntCmpny_dt {
+	/* font-weight: bold; */
+	color: #2E83F2;
+	font-size: 12px;
+}
+/* 고객 추가 팝업 끝  */

@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="clntCmpnyMng">
+
+	<!-- 고객 시퀀스 담기 -->
+	<select id="clntSeq" resultType="String">
+		SELECT ENTRPRS_CLNT_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<!-- 고객사 시퀀스 담기 -->
+	<select id="clntCmpnySeq" resultType="String">
+		SELECT CLNT_CMPNY_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<!-- 고객사명 중복 체크 -->
+	<select id="ccNameCnt" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE CLNT_CMPNY_NAME = #{ccName}
+	</select>
+
+	<!-- 고객사 목록 -->
+	<select id="getClntCmpntList" parameterType="hashmap" resultType="hashmap">
+		SELECT A.RNUM, A.CLNT_CMPNY_NUM, A.GRADE_NAME, A.CLNT_CMPNY_CLSFY_NAME, A.CLNT_CMPNY_NAME, A.ADRS, TRIM(TO_CHAR(RVN, 'L999,999,999,999,999')) AS RVN, A.CNT, A.DEL_CHECK
+		FROM (  SELECT A.RNUM, A.CLNT_CMPNY_NUM, A.GRADE_NAME, A.CLNT_CMPNY_CLSFY_NAME, A.CLNT_CMPNY_NAME, A.ADRS, A.RVN, A.CNT,
+							ROW_NUMBER() OVER(ORDER BY
+							<choose>
+								<when test="listSort == 9">
+									 A.RNUM
+								</when>
+								<when test="listSort == 0">
+									A.RVN 
+								</when>
+								<when test="listSort == 1">
+									A.CLNT_CMPNY_NAME
+								</when>
+							</choose>
+							DESC) AS RNUM2
+		               , A.DEL_CHECK
+		        FROM (  SELECT A.RNUM, A.CLNT_CMPNY_NUM, A.GRADE_NAME, A.CLNT_CMPNY_CLSFY_NAME, A.CLNT_CMPNY_NAME, A.ADRS, A.RVN, A.CNT,
+		                       A.CLNT_CMPNY_CLSFY_NUM, A.DEL_CHECK
+		                FROM ( SELECT A.CLNT_CMPNY_NUM, A.GRADE_NAME, A.CLNT_CMPNY_CLSFY_NAME, A.CLNT_CMPNY_NAME, A.ADRS, A.RVN, NVL(B.CNT, 0) AS CNT,
+		                              A.CLNT_CMPNY_CLSFY_NUM, ROW_NUMBER() OVER(ORDER BY A.RNUM DESC) AS RNUM, A.DEL_CHECK
+		                       FROM ( SELECT ROW_NUMBER() OVER(ORDER BY CC.CLNT_CMPNY_NUM DESC) AS RNUM, CC.CLNT_CMPNY_NUM, CCG.GRADE_NAME, CCC.CLNT_CMPNY_CLSFY_NAME,
+		                                     CC.CLNT_CMPNY_NAME, CC.RVN, CC.ADRS, CC.CLNT_CMPNY_CLSFY_NUM, CC.DEL_CHECK
+		                              FROM CLNT_CMPNY CC INNER JOIN CLNT_CMPNY_GRADE CCG
+		                                                         ON CC.GRADE_NUM = CCG.GRADE_NUM
+		                                                 INNER JOIN CLNT_CMPNY_CLSFY CCC
+		                                                         ON CC.CLNT_CMPNY_CLSFY_NUM = CCC.CLNT_CMPNY_CLSFY_NUM ) A 
+                                                    LEFT OUTER JOIN (	SELECT CC.CLNT_CMPNY_NAME, COUNT(*) AS CNT
+		                                                                FROM CLNT_CMPNY CC INNER JOIN ENTRPRS_CLNT EC
+		                                                                                           ON CC.CLNT_CMPNY_NUM = EC.CLNT_CMPNY_NUM
+		                                                                                   INNER JOIN LEAD L
+		                                                                                           ON L.CLNT_NUM = EC.CLNT_NUM 
+		                                                                                   INNER JOIN SALES S
+		                                                                                           ON S.LEAD_NUM = L.LEAD_NUM
+		                                                                                   INNER JOIN CNTRCT C
+		                                                                                           ON C.SALES_NUM = S.SALES_NUM                        
+		                                                                GROUP BY CC.CLNT_CMPNY_NAME  ) B
+		                                                           ON A.CLNT_CMPNY_NAME = B.CLNT_CMPNY_NAME ) A
+		                WHERE A.DEL_CHECK IS NULL ) A
+		WHERE 1 = 1
+		<choose>
+			<when test="clntCmpnyClsfyNum != 9" > <!-- 선택안함 : 0 이 아니면 해당 번호 목록으로 검색 -->
+				AND A.CLNT_CMPNY_CLSFY_NUM = #{clntCmpnyClsfyNum}
+			</when>
+		</choose> 
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="clntCmpnyClsfyNum == 9 and searchType == 0">
+					AND A.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="clntCmpnyClsfyNum == 9 and searchType == 1">
+					AND A.CLNT_CMPNY_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="clntCmpnyClsfyNum != 9 and searchType == 0">
+					AND A.CLNT_CMPNY_CLSFY_NUM = #{clntCmpnyClsfyNum}
+					AND A.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="clntCmpnyClsfyNum != 9 and searchType == 1">
+					AND A.CLNT_CMPNY_CLSFY_NUM = #{clntCmpnyClsfyNum}
+					AND A.CLNT_CMPNY_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		) A
+		WHERE A.RNUM2 BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!-- 고객사 목록 개수 -->
+	<select id="clntCmpnyListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+		<choose>
+			<when test="clntCmpnyClsfyNum != 9" > <!-- 선택안함 : 0 이 아니면 해당 번호 목록으로 검색 -->
+				AND CLNT_CMPNY_CLSFY_NUM = #{clntCmpnyClsfyNum}
+			</when>
+		</choose> 
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="clntCmpnyClsfyNum == 9 and searchType == 0">
+					AND CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="clntCmpnyClsfyNum == 9 and searchType == 1">
+					AND CLNT_CMPNY_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="clntCmpnyClsfyNum != 9 and searchType == 0">
+					AND CLNT_CMPNY_CLSFY_NUM = #{clntCmpnyClsfyNum}
+					AND CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="clntCmpnyClsfyNum != 9 and searchType == 1">
+					AND CLNT_CMPNY_CLSFY_NUM = #{clntCmpnyClsfyNum}
+					AND CLNT_CMPNY_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<!-- 고객사 등록 -->
+	<insert id="ClntCmpnyAdd" parameterType="hashmap">
+		INSERT INTO CLNT_CMPNY (CLNT_CMPNY_NUM, CLNT_CMPNY_CLSFY_NUM, GRADE_NUM, RCGNTN_PATH_NUM, CLNT_CMPNY_NAME, BSNSMN_RGSTRTN_NUM,
+							    CLNT_NAME, PHONE_NUM, FAX, HMPG, ZIP_CODE_NUM, ADRS, DTL_ADRS, RVN, EMP_NUM)
+		VALUES (#{ccs}, #{ccClsfy}, #{ccGrade}, #{rp}, #{ccName}, #{brNum}, #{cName}, #{phoneNum}, #{fax}, #{hmpg},
+			    #{zipCodeNum}, #{adrs}, #{dtlAdrs}, #{rvn}, #{sEmpNum})
+	</insert>
+	
+	<!-- 고객사 목록 전체 개수 -->
+	<select id="clntCmpnyListAllCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+	</select>
+	
+	<!-- 거래고객사 개수 -->
+	<select id="clntCmpnyCntrctCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+        FROM CLNT_CMPNY
+        WHERE 1 = 1
+        AND DEL_CHECK IS NULL
+		AND CLNT_CMPNY_CLSFY_NUM = 0
+	</select>
+	
+	<!-- 파트너사 개수 -->
+	<select id="clntCmpnyPartnerCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+		AND CLNT_CMPNY_CLSFY_NUM = 1
+	</select>
+	
+	<!-- 해지고객사 개수 -->
+	<select id="clntCmpnyTmnCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+		AND CLNT_CMPNY_CLSFY_NUM = 2
+	</select>
+	
+	<!-- 정지고객사 개수 -->
+	<select id="clntCmpnySspsCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+		AND CLNT_CMPNY_CLSFY_NUM = 3
+	</select>
+	
+	<!-- 외국파트너사 개수 -->
+	<select id="clntCmpnyForeignCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+		AND CLNT_CMPNY_CLSFY_NUM = 4
+	</select>
+	
+	<!-- 기타 개수 -->
+	<select id="clntCmpnyEtcCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+		AND DEL_CHECK IS NULL
+		AND CLNT_CMPNY_CLSFY_NUM = 5
+	</select>
+	
+	<!-- 고객사 첨부파일 등록 -->
+	<insert id="ClntCmpnyAddAttFile" parameterType="hashmap">
+		INSERT INTO CLNT_CMPNY_ATT_FILE (ATT_FILE_NUM, CLNT_CMPNY_NUM, ATT_FILE_NAME)
+		VALUES (CLNT_CMPNY_ATT_FILE_SEQ.NEXTVAL, CLNT_CMPNY_SEQ.CURRVAL, #{attFile})
+	</insert>
+	
+	<!-- 고객사 의견 등록 -->
+	<insert id="ccOpContAdd" parameterType="hashmap">
+		INSERT INTO CLNT_CMPNY_CMNT(CMNT_NUM, CLNT_CMPNY_NUM, EMP_NUM, CONT)
+		VALUES(CLNT_CMPNY_CMNT_SEQ.NEXTVAL, #{ccn}, #{sEmpNum}, #{tacont})
+	</insert>
+	
+	<!-- 고객 의견 등록 -->
+	<insert id="clOpContAdd" parameterType="hashmap">
+		INSERT INTO CLNT_CMNT(CMNT_NUM, CLNT_NUM, EMP_NUM, CONT)
+		VALUES(CLNT_CMNT_SEQ.NEXTVAL, #{cn}, #{sEmpNum}, #{tacont})
+	</insert>
+	
+	<!-- 고객 첨부파일 등록 -->
+	<insert id="clntAttAdd" parameterType="hashmap">
+		INSERT INTO CLNT_ATT_FILE (ATT_FILE_NUM, CLNT_NUM, ATT_FILE_NAME)
+		VALUES (CLNT_ATT_FILE_SEQ.NEXTVAL, ENTRPRS_CLNT_SEQ.CURRVAL, #{attFile})
+	</insert>
+	
+	<!-- 고객 목록 -->
+	<select id="getClntList" parameterType="hashmap" resultType="hashmap">
+		SELECT EC.CLNT_NUM, NVL(EC.DEPT, ' ') AS DEPT, NVL(EC.DUTY, ' ') AS DUTY, NVL(EC.EMAIL, ' ') AS EMAIL, EC.CLNT_CMPNY_NAME, EC.CLNT_NAME, REGEXP_REPLACE(EC.MBL, '(.{3})(.+)(.{4})', '\1-\2-\3') AS MBL, EC.RNUM
+		FROM (  SELECT EC.CLNT_NUM, EC.DEPT, EC.DUTY, EC.EMAIL, EC.CLNT_CMPNY_NAME, EC.CLNT_NAME, EC.MBL, EC.RNUM,
+		               ROW_NUMBER() OVER(ORDER BY 
+		                <choose>
+							<when test="listSort == 9">
+								EC.RNUM
+							</when>
+							<when test="listSort == 0">
+								EC.CLNT_NUM
+							</when>
+							<when test="listSort == 1">
+								EC.CLNT_CMPNY_NAME
+							</when>
+						</choose>
+					   DESC) AS RNUM2
+		        FROM (  SELECT EC.CLNT_NUM, EC.DEPT, EC.DUTY, EC.EMAIL, EC.CLNT_CMPNY_NAME, EC.CLNT_NAME, EC.MBL, EC.RNUM
+		                FROM (  SELECT EC.CLNT_NUM, EC.DEPT, EC.DUTY, EC.EMAIL, EC.CLNT_CMPNY_NAME, EC.CLNT_NAME,
+		                               EC.MBL, ROW_NUMBER() OVER(ORDER BY EC.RNUM DESC) AS RNUM
+		                        FROM (  SELECT EC.CLNT_NUM, EC.DEPT, EC.DUTY, EC.EMAIL, CC.CLNT_CMPNY_NAME, EC.CLNT_NAME,
+		                                       EC.MBL, ROW_NUMBER() OVER(ORDER BY EC.CLNT_NUM DESC) AS RNUM, EC.DEL_CHECK
+		                                FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMPNY CC
+		                                                             ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		                                WHERE EC.DEL_CHECK IS NULL) EC ) EC ) EC
+		WHERE 1 = 1
+        <if test="searchTxt != null and searchTxt != ''">
+        	<choose>
+        		<when test="searchType == 0">
+        			AND EC.CLNT_NAME LIKE '%' || #{searchTxt} || '%'
+        		</when>
+        		<when test="searchType == 1">
+        			AND EC.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+        		</when>
+        		<when test="searchType == 2">
+        			AND EC.CLNT_NUM LIKE '%' || #{searchTxt} || '%'
+        		</when>
+        	</choose>
+        </if>
+        <if test="listSort != '9'">
+			<choose>
+				<when test="listSort == 0">
+					ORDER BY EC.CLNT_NUM ASC
+				</when>
+				<when test="listSort == 1">
+					ORDER BY EC.CLNT_CMPNY_NAME ASC
+				</when>
+			</choose>
+		</if> ) EC
+		WHERE EC.RNUM2 BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!-- 고객 목록 개수 -->
+	<select id="clntListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMPNY CC
+									 ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		WHERE 1 = 1
+   		<if test="searchTxt != null and searchTxt != ''">
+        	<choose>
+        		<when test="searchType == 0">
+        			AND EC.CLNT_NAME LIKE '%' || #{searchTxt} || '%'
+        		</when>
+        		<when test="searchType == 1">
+        			AND CC.CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+        		</when>
+        		<when test="searchType == 2">
+        			AND EC.CLNT_NUM LIKE '%' || #{searchTxt} || '%'
+        		</when>
+        	</choose>
+        </if>
+		AND EC.DEL_CHECK IS NULL
+	</select>
+	
+	<!-- 고객사 상세보기 -->
+	<select id="clntCmpnyCont" parameterType="hashmap" resultType="hashmap">
+		SELECT CC.CLNT_CMPNY_NAME, CC.CLNT_CMPNY_CLSFY_NUM, CC.GRADE_NUM, CC.BSNSMN_RGSTRTN_NUM, CC.CLNT_NAME,
+		       CC.PHONE_NUM, CC.FAX, CC.HMPG, CC.ZIP_CODE_NUM, CC.ADRS, CC.DTL_ADRS, 
+		       TRIM(TO_CHAR(CC.RVN, '999,999,999,999,999')) AS RVN, CC.RCGNTN_PATH_NUM,
+		       CCA.ATT_FILE_NAME, CC.CLNT_CMPNY_NUM
+		FROM CLNT_CMPNY CC LEFT OUTER JOIN CLNT_CMPNY_ATT_FILE CCA
+		                           ON CC.CLNT_CMPNY_NUM = CCA.CLNT_CMPNY_NUM
+		WHERE CC.CLNT_CMPNY_NUM = #{ccn}
+	</select>
+	
+	<!-- 고객 상세보기 -->
+	<select id="clntCont" parameterType="hashmap" resultType="hashmap">
+		SELECT EC.CLNT_NAME, CC.CLNT_CMPNY_NAME, EC.DEPT, EC.DUTY, REGEXP_REPLACE(EC.MBL, '(.{3})(.+)(.{4})', '\1-\2-\3') AS MBL, EC.EMAIL,
+		       E.EMP_NAME, CAF.ATT_FILE_NAME, EC.RGSTRTN_EMP_NUM, EC.MNGR_EMP_NUM, EC.CLNT_CMPNY_NUM
+		FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMPNY CC
+		                             ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		                     INNER JOIN EMP E
+		                             ON EC.MNGR_EMP_NUM = E.EMP_NUM
+		                LEFT OUTER JOIN CLNT_ATT_FILE CAF
+		                             ON EC.CLNT_NUM = CAF.CLNT_NUM 
+		WHERE EC.CLNT_NUM = #{cn}
+	</select>
+	
+	<!-- 고객 수정화면 -->
+	<select id="clntUpdateCont" parameterType="hashmap" resultType="hashmap">
+		SELECT EC.CLNT_NAME, CC.CLNT_CMPNY_NAME, EC.DEPT, EC.DUTY, EC.MBL, EC.EMAIL,
+		       E.EMP_NAME, CAF.ATT_FILE_NAME, EC.RGSTRTN_EMP_NUM, EC.MNGR_EMP_NUM, EC.CLNT_CMPNY_NUM
+		FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMPNY CC
+		                             ON EC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM
+		                     INNER JOIN EMP E
+		                             ON EC.MNGR_EMP_NUM = E.EMP_NUM
+		                LEFT OUTER JOIN CLNT_ATT_FILE CAF
+		                             ON EC.CLNT_NUM = CAF.CLNT_NUM 
+		WHERE EC.CLNT_NUM = #{cn}
+	</select>
+
+	<!-- 고객사 삭제 -->
+	<update id="ccDelete" parameterType="hashmap">
+		UPDATE CLNT_CMPNY SET DEL_CHECK = SYSDATE
+		WHERE CLNT_CMPNY_NUM = #{cmNum}
+	</update>
+	
+	<!-- 고객 삭제 -->
+	<update id="clntDelete" parameterType="hashmap">
+		UPDATE ENTRPRS_CLNT SET DEL_CHECK = SYSDATE
+		WHERE CLNT_NUM = #{cn}
+	</update>
+	
+	<!-- 고객 등록 -->
+	<select id="clntAdd" parameterType="hashmap" resultType="hashmap">
+		INSERT INTO ENTRPRS_CLNT (CLNT_NUM, CLNT_NAME, CLNT_CMPNY_NUM, MNGR_EMP_NUM, RGSTRTN_EMP_NUM, DEPT, DUTY, MBL, EMAIL)
+		VALUES (#{cs}, #{cName}, #{ccNum}, #{mngNum}, #{sEmpNum}, #{dept}, #{duty}, #{mbl}, #{email})
+	</select>
+	
+	<!-- (팝업) 고객사 목록 개수 -->
+	<select id="popupCcListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY
+		WHERE 1 = 1
+        <choose>
+			<when test="searchType != 9" > <!-- 선택안함 : 0 이 아니면 해당 번호 목록으로 검색 -->
+				AND CLNT_CMPNY_CLSFY_NUM = #{searchType}
+			</when>
+		</choose> 
+		<if test="searchTxt != null and searchTxt != ''">
+			AND CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+		</if>
+		AND DEL_CHECK IS NULL
+	</select>
+	
+	<!-- (팝업) 담당자 목록 개수 -->
+	<select id="popupMngListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EMP E INNER JOIN APNTM A
+                           ON E.EMP_NUM = A.EMP_NUM
+                   INNER JOIN DEPT D
+                           ON A.DEPT_NUM = D.DEPT_NUM
+                   INNER JOIN RANK R
+                           ON A.RANK_NUM = R.RANK_NUM
+		WHERE D.DEPT_NAME LIKE '영%'
+		<choose>
+			<when test="deptS != 6">
+				AND D.DEPT_NUM = #{deptS}
+			</when>
+		</choose>
+		<if test="searchT != null and searchT != ''">
+			<choose>
+				<when test="empS == 0">
+					AND E.EMP_NUM LIKE '%' || #{searchT} || '%'
+				</when>
+				<when test="empS == 1">
+					AND E.EMP_NAME LIKE '%' || #{searchT} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<!-- (팝업) 고객사 목록 -->
+	<select id="popupCcList" parameterType="hashmap" resultType="hashmap">
+		SELECT CC.CLNT_CMPNY_NAME, DECODE(CC.CLNT_CMPNY_CLSFY_NUM, 0, '거래고객사', 1, '파트너사', 2, '해지고객사', 3, '정지고객사', 4, '외국파트너사', 5, '기타') AS CLNT_CMPNY_CLSFY_NAME, 
+		       DECODE(CC.GRADE_NUM, 0, 'S', 1, 'A', 2, 'B', 3, 'C', 4, 'D') AS GRADE_NAME, 
+		       CC.ADRS, TO_CHAR(CC.RGSTRTN_DATE, 'YYYY-MM-DD') AS RGSTRTN_DATE, CC.CLNT_CMPNY_NUM
+		FROM (  SELECT CLNT_CMPNY_NAME, CLNT_CMPNY_CLSFY_NUM, GRADE_NUM, ADRS, RGSTRTN_DATE, CLNT_CMPNY_NUM,
+		               ROW_NUMBER() OVER(ORDER BY CLNT_CMPNY_NUM DESC) AS RNUM    
+		        FROM CLNT_CMPNY
+		        WHERE 1 = 1
+		        <choose>
+					<when test="searchType != 9" > <!-- 선택안함 : 0 이 아니면 해당 번호 목록으로 검색 -->
+						AND CLNT_CMPNY_CLSFY_NUM = #{searchType}
+					</when>
+				</choose> 
+				<if test="searchTxt != null and searchTxt != ''">
+					AND CLNT_CMPNY_NAME LIKE '%' || #{searchTxt} || '%'
+				</if>
+				AND DEL_CHECK IS NULL ) CC
+		WHERE CC.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!-- (팝업) 담당자 목록 -->
+	<select id="popupMngList" parameterType="hashmap" resultType="hashmap">
+		SELECT ME.EMP_NUM, ME.EMP_NAME, ME.RANK_NAME, ME.DEPT_NAME
+		FROM (	SELECT E.EMP_NUM, E.EMP_NAME, R.RANK_NAME, D.DEPT_NUM, D.DEPT_NAME,
+					   ROW_NUMBER() OVER(ORDER BY E.EMP_NUM ASC) AS RNUM
+				FROM EMP E INNER JOIN APNTM A
+								   ON E.EMP_NUM = A.EMP_NUM
+						   INNER JOIN DEPT D
+								   ON A.DEPT_NUM = D.DEPT_NUM
+						   INNER JOIN RANK R
+								   ON A.RANK_NUM = R.RANK_NUM
+				WHERE D.DEPT_NAME LIKE '영%' ) ME
+		WHERE ME.RNUM BETWEEN #{startCount} AND #{endCount}
+		<choose>
+			<when test="deptS != 6">
+				AND ME.DEPT_NUM = #{deptS}
+			</when>
+		</choose>
+		<if test="searchT != null and searchT != ''">
+			<choose>
+				<when test="empS == 0">
+					AND ME.EMP_NUM LIKE '%' || #{searchT} || '%'
+				</when>
+				<when test="empS == 1">
+					AND ME.EMP_NAME LIKE '%' || #{searchT} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<!-- 고객사 의견 목록 -->
+	<select id="getCcOpList" parameterType="hashmap" resultType="hashmap">
+		SELECT CCC.CLNT_CMPNY_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, CCC.CONT, TO_CHAR(CCC.RGSTRTN_DATE, 'YYYY-MM-DD AM HH:MI') AS RGSTRTN_DATE,
+		       CCC.CMNT_NUM, E.EMP_NUM
+		FROM CLNT_CMPNY_CMNT CCC INNER JOIN CLNT_CMPNY CC
+		                             ON CCC.CLNT_CMPNY_NUM = CC.CLNT_CMPNY_NUM  
+		                         INNER JOIN EMP E
+		                                 ON CCC.EMP_NUM = E.EMP_NUM
+		                         INNER JOIN APNTM A
+		                                 ON E.EMP_NUM = A.EMP_NUM
+		                         INNER JOIN DEPT D
+		                                 ON A.DEPT_NUM = D.DEPT_NUM
+		                         INNER JOIN RANK R
+		                                 ON A.RANK_NUM = R.RANK_NUM
+		WHERE CCC.DEL_CHECK IS NULL
+		AND CCC.CLNT_CMPNY_NUM = #{ccn}
+		ORDER BY CCC.CMNT_NUM DESC
+	</select>
+	
+	<!-- 고객 의견 목록 -->
+	<select id="getClOpList" parameterType="hashmap" resultType="hashmap">
+		SELECT EC.CLNT_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, CC.CONT, TO_CHAR(EC.RGSTRTN_DATE, 'YYYY-MM-DD AM HH:MI') AS RGSTRTN_DATE,
+		       CC.CMNT_NUM, E.EMP_NUM
+		FROM ENTRPRS_CLNT EC INNER JOIN CLNT_CMNT CC
+		                             ON EC.CLNT_NUM = CC.CLNT_NUM	
+		                     INNER JOIN EMP E
+		                             ON EC.MNGR_EMP_NUM = E.EMP_NUM
+		                     INNER JOIN APNTM A
+		                             ON E.EMP_NUM = A.EMP_NUM
+		                     INNER JOIN DEPT D
+		                             ON A.DEPT_NUM = D.DEPT_NUM
+		                     INNER JOIN RANK R
+		                             ON A.RANK_NUM = R.RANK_NUM
+		WHERE CC.DEL_CHECK IS NULL
+		AND EC.CLNT_NUM = #{cn}
+		ORDER BY CC.CMNT_NUM DESC
+	</select>
+	
+	<!-- 고객사 상세보기/고객 목록 -->
+	<select id="getClList" parameterType="hashmap" resultType="hashmap">
+		SELECT EC.CLNT_NAME, NVL(EC.DUTY, ' ') AS DUTY, NVL(EC.DEPT, ' ') AS DEPT, REGEXP_REPLACE(CC.PHONE_NUM, '(.{3})(.+)(.{4})', '\1-\2-\3') AS PHONE_NUM, NVL(EC.EMAIL, ' ') AS EMAIL,
+			   REGEXP_REPLACE(EC.MBL, '(.{3})(.+)(.{4})', '\1-\2-\3') AS MBL	
+		FROM CLNT_CMPNY CC INNER JOIN ENTRPRS_CLNT EC
+		                           ON CC.CLNT_CMPNY_NUM = EC.CLNT_CMPNY_NUM
+		WHERE CC.CLNT_CMPNY_NUM = #{ccn}
+		AND EC.DEL_CHECK IS NULL
+        ORDER BY EC.CLNT_NUM DESC
+	</select>
+	
+	<!-- 고객사 의견 삭제 -->
+	<update id="ccOpContUpdate" parameterType="hashmap">
+		UPDATE CLNT_CMPNY_CMNT SET DEL_CHECK = SYSDATE
+		WHERE CMNT_NUM = #{cmntNum}
+	</update>
+	
+	<!-- 고객사 의견 개수 -->
+	<select id="ccOpListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMPNY_CMNT
+		WHERE DEL_CHECK IS NULL
+		AND CLNT_CMPNY_NUM = #{ccn}
+	</select>
+	
+	<!-- 고객 의견 삭제 -->
+	<update id="clOpContUpdate" parameterType="hashmap">	
+		UPDATE CLNT_CMNT SET DEL_CHECK = SYSDATE
+		WHERE CMNT_NUM = #{cmntNum}
+	</update>
+	
+	<!-- 고객 의견 개수 -->
+	<select id="clOpListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CLNT_CMNT
+		WHERE DEL_CHECK IS NULL
+		AND CLNT_NUM = #{cn}
+	</select>
+	
+	<!-- 고객사 상세보기/고객 개수 -->
+	<select id="clListCnt" parameterType="hashmap" resultType="Integer">
+        SELECT COUNT(*) AS CNT
+		FROM ENTRPRS_CLNT
+		WHERE DEL_CHECK IS NULL
+		AND CLNT_CMPNY_NUM = #{ccn}
+	</select>
+	
+	<!-- 고객사 수정 -->
+	<update id="ClntCmpnyUpdate" parameterType="hashmap">
+		UPDATE CLNT_CMPNY SET CLNT_CMPNY_CLSFY_NUM = #{ccClsfy},
+		                      GRADE_NUM = #{ccGrade},
+		                      RCGNTN_PATH_NUM = #{rp},
+		                      CLNT_CMPNY_NAME = #{ccName},
+		                      BSNSMN_RGSTRTN_NUM = #{brNum},
+		                      CLNT_NAME = #{cName},
+		                      PHONE_NUM = #{phoneNum},
+		                      FAX = #{fax},
+		                      HMPG = #{hmpg},
+		                      ZIP_CODE_NUM = #{zipCodeNum},
+		                      ADRS = #{adrs},
+		                      DTL_ADRS = #{dtlAdrs},
+		                      RVN = #{rvn},
+		                      EMP_NUM = #{sEmpNum}
+		WHERE CLNT_CMPNY_NUM = #{ccn}
+	</update>
+	
+	<!-- 고객사 첨부파일 수정 -->
+	<update id="ClntCmpnyAttFileUpdate" parameterType="hashmap">
+		UPDATE CLNT_CMPNY_ATT_FILE SET ATT_FILE_NAME = #{attFile}
+		WHERE CLNT_CMPNY_NUM = #{ccn}
+	</update>
+	
+	<!-- 고객 수정 -->
+	<update id="clntUpdate" parameterType="hashmap">
+		UPDATE ENTRPRS_CLNT SET CLNT_NAME = #{cName}, 
+		                        MNGR_EMP_NUM = ${mngNum}, 
+		                        CLNT_CMPNY_NUM = #{ccNum}, 
+		                        DEPT = #{dept}, 
+		                        DUTY = #{duty}, 
+		                        MBL = #{mbl}, 
+		                        EMAIL = #{email}
+		WHERE CLNT_NUM = #{cn}
+	</update>
+	
+	<!-- 고객 첨부파일 수정 -->
+	<update id="clntAttUpdate" parameterType="hashmap">
+		UPDATE CLNT_ATT_FILE SET ATT_FILE_NAME = #{attFile}
+		WHERE CLNT_NUM = #{cn}
+	</update>
+	
+	
+</mapper>

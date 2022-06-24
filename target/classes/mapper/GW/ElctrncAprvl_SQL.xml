@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="elctrncAprvl">
+	<select id="getAprvlTmpltBox" resultType="hashmap" parameterType="hashmap">
+		SELECT E.TMPLT_NUM, E.TMPLT_DVSN_NUM, E.TMPLT_NAME, E.TMPLT_CONT, D.TMPLT_DVSN_NAME, E.DEL_CHECK, ROW_NUMBER()OVER(ORDER BY TMPLT_NUM ASC) AS RNUM
+		FROM(SELECT TMPLT_NUM, TMPLT_DVSN_NUM, TMPLT_NAME, TMPLT_CONT, DEL_CHECK,ROW_NUMBER()OVER(ORDER BY TMPLT_NUM ASC) AS RNUM
+		FROM DRAFT_TMPLT) E INNER JOIN DRAFT_TMPLT_DVSN D
+		ON E.TMPLT_DVSN_NUM = D.TMPLT_DVSN_NUM
+	</select>
+
+	<select id="draftTmpltBoxWrite" parameterType="hashmap">
+	
+	</select>
+
+<select id = "aprvlSeq" resultType="String">
+	SELECT APRVL_SEQ.NEXTVAL
+	FROM DUAL
+</select>
+
+<insert id = "aprvlLineAdd" parameterType="hashmap">
+	INSERT INTO APRVL (APRVL_NUM, EMP_NUM, TITLE, CONT, DRAFT_DATE)
+	VALUES(#{al}, #{empNum}, #{title}, #{cont}, TO_CHAR(SYSDATE, 'YYYY-MM-DD'))
+</insert>
+
+<select id = "aprvlRfrncSeq" resultType="String"> 
+	SELECT APRVL_RFRNC_SEQ.NEXTVAL
+	FROM DUAL
+</select>
+<insert id="aprvlAdd" parameterType="hashmap">
+	INSERT INTO APRVL (APRVL_NUM, EMP_NUM, TITLE, CONT
+	<if test="att_file != null and att_file != ''">
+	, ATT_FILE
+	</if>
+	)
+	VALUES(#{aprvl_num}, #{emp_num}, #{title}, #{cont} 
+	<if test="att_file != null and att_file != ''">
+	, #{att_file}
+	</if>
+	)
+</insert>
+<insert id="aprvlerAdd" parameterType="hashmap">
+	INSERT INTO APRVL_LINE (APRVL_NUM, EMP_NUM, APRVL_TURN)
+	VALUES(#{aprvl_num}, #{aprvler}, #{aprvl_turn}) 
+</insert>
+<insert id="rfrncAdd" parameterType="hashmap">
+	INSERT INTO APRVL_RFRNC (APRVL_NUM, EMP_NUM)
+	VALUES(#{aprvl_num}, #{rfrnc}) 
+</insert>
+
+<select id = "addList" parameterType = "hashmap" resultType="hashmap">
+SELECT *
+FROM (SELECT E.EMP_NUM, E.EMP_NAME, D.DEPT_NAME, R.RANK_NAME, AL.APRVL_STS
+FROM  EMP E INNER JOIN APNTM A
+                        ON E.EMP_NUM = A.EMP_NUM
+            INNER JOIN DEPT D
+                        ON A.DEPT_NUM = D.DEPT_NUM
+            INNER JOIN RANK R
+                        ON A.RANK_NUM = R.RANK_NUM 
+            INNER JOIN APRVL_LINE AL
+                        ON A.EMP_NUM = AL.EMP_NUM
+     )
+WHERE 1 = 1
+
+</select>
+
+<select id="getAprvlList" parameterType="hashmap" resultType="hashmap">
+SELECT *
+FROM(
+SELECT AL.APRVL_NUM, AL.APRVL_STS, AL.STS_CHNG_DATE, AL.CMNT, AL.APRVL_TURN, E.EMP_NAME, A.EMP_NUM, AR.DRAFT_DATE, A.DEPT_NUM, D.DEPT_NAME, AR.TITLE, AR.CONT, ROW_NUMBER() OVER(ORDER BY AL.APRVL_NUM DESC) AS RNUM
+FROM APRVL_LINE AL INNER JOIN APNTM A
+                   			 	ON AL.EMP_NUM = A.EMP_NUM
+                    INNER JOIN DEPT D
+                    			ON A.DEPT_NUM = D.DEPT_NUM 
+                    INNER JOIN APRVL AR
+                    			ON AL.APRVL_NUM = AR.APRVL_NUM
+                    INNER JOIN EMP E
+                    			ON AL.EMP_NUM = E.EMP_NUM
+WHERE AL.EMP_NUM = #{employ_no}
+		<if test="searchTxt != null and searchTxt != ''"> 
+					<choose>
+						<when test="searchGbn == 0">
+							AND AL.APRVL_NUM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 1">
+							AND AR.TITLE LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				) AB
+				WHERE AB.RNUM BETWEEN #{startCount} AND #{endCount} 
+</select>
+
+<select id = "aprvlResult" parameterType="hashmap" resultType="String">
+	SELECT CASE WHEN AL.ING > 0
+	            THEN 0
+	            WHEN AL.FA > 0
+	            THEN 2
+	            ELSE 1
+	       END AS RES
+	FROM (
+	        SELECT COUNT(*) AS CNT,
+	               COUNT(DECODE(APRVL_STS, 0, 1, NULL)) AS ING,
+	               COUNT(DECODE(APRVL_STS, 1, 1, NULL)) AS ED,
+	               COUNT(DECODE(APRVL_STS, 2, 1, NULL)) AS FA
+	        FROM APRVL_LINE
+	        WHERE APRVL_NUM = #{aprvl_num}
+	        ) AL 
+</select>
+<!-- <select id = "aprvlResult" resultType="String">
+	SELECT  DISTINCT CASE WHEN APRVL_STS = 0 THEN '결재진행중'
+        				  WHEN APRVL_STS = 1 THEN '결재완료'
+        				  WHEN APRVL_STS = 2 THEN '결재반려'
+    END AS  APRVL_STS
+	FROM APRVL_LINE
+	WHERE APRVL_NUM = #{aprvl_num} 
+</select>  -->
+
+<select id="tmpltCont" parameterType="hashmap" resultType="hashmap">
+SELECT *
+FROM DRAFT_TMPLT
+WHERE TMPLT_NUM = #{no}
+</select>
+
+<select id="getAprvlListCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM APRVL 
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn == 0">
+					 AND APRVL_NUM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 1">
+					 AND TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		
+	</select>
+	
+ <select id="aprvlAdds" resultType="hashmap" parameterType="hashmap">
+SELECT AL.APRVL_NUM, AL.TITLE, AL.CONT, AL.ATT_FILE,  E.EMP_NAME, D.DEPT_NAME 
+FROM APRVL AL INNER JOIN EMP E
+                            ON AL.EMP_NUM = E.EMP_NUM
+                    INNER JOIN APNTM AT
+                            ON E.EMP_NUM = AT.EMP_NUM
+                    INNER JOIN DEPT D
+                              ON AT.DEPT_NUM = D.DEPT_NUM
+WHERE AL.APRVL_NUM = #{no} AND STS_NUM = 1  
+
+</select> 
+
+<select id="aprvlProcess" resultType="hashmap" parameterType="hashmap">
+SELECT AL.APRVL_STS, AL.STS_CHNG_DATE, AL.CMNT, E.EMP_NAME, D.DEPT_NAME 
+FROM APRVL_LINE AL INNER JOIN EMP E
+                            ON AL.EMP_NUM = E.EMP_NUM
+                    INNER JOIN APNTM AT
+                            ON E.EMP_NUM = AT.EMP_NUM
+                    INNER JOIN DEPT D
+                              ON AT.DEPT_NUM = D.DEPT_NUM
+WHERE E.EMP_NAME = #{employ_name} AND D.DEPT_NAME = #{employ_dept} 
+</select>
+
+<select id="aprvlList" resultType="hashmap" parameterType="hashmap">
+SELECT AL.APRVL_NUM, AL.APRVL_TURN, AL.APRVL_STS, AL.STS_CHNG_DATE, AL.CMNT, E.EMP_NAME, D.DEPT_NAME 
+FROM APRVL_LINE AL INNER JOIN EMP E
+                            ON AL.EMP_NUM = E.EMP_NUM
+                    INNER JOIN APNTM AT
+                            ON E.EMP_NUM = AT.EMP_NUM
+                    INNER JOIN DEPT D
+                              ON AT.DEPT_NUM = D.DEPT_NUM
+WHERE AL.APRVL_NUM = #{no} AND STS_NUM = 1
+ORDER BY APRVL_TURN ASC
+</select>
+
+<select id="aprvlSts" resultType="hashmap" parameterType="hashmap">
+SELECT AL.APRVL_STS, TO_CHAR(AL.STS_CHNG_DATE,'YYYY-MM-DD') AS STS_CHNG_DATE, E.EMP_NAME, D.DEPT_NAME, AL.APRVL_TURN
+FROM APRVL_LINE AL INNER JOIN EMP E
+                            ON AL.EMP_NUM = E.EMP_NUM
+                    INNER JOIN APNTM AT
+                            ON E.EMP_NUM = AT.EMP_NUM
+                    INNER JOIN DEPT D
+                              ON AT.DEPT_NUM = D.DEPT_NUM
+WHERE AL.APRVL_NUM = #{no} AND STS_NUM = 1
+ORDER BY APRVL_TURN ASC
+</select>
+
+<update id="aprvlUpdate" parameterType="hashmap">
+UPDATE APRVL_LINE SET APRVL_STS = #{a},
+                    CMNT = #{cmnt},
+                    STS_CHNG_DATE = SYSDATE                  
+WHERE APRVL_NUM = #{no} AND EMP_NUM = #{employ_no} 
+</update>
+</mapper>

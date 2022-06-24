@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="FQ">
+<select id="getfaqList" resultType="hashmap" parameterType="hashmap">
+	SELECT FQ.FAQ_NUM, FQ.CTGRY_NAME, FQ.WRTNG_TITLE, FQ.EMP_NAME, FQ.WRTNG_DATE, FQ.FAQ_HITS
+	FROM ( SELECT F.FAQ_NUM, ICT.CTGRY_NAME, E.EMP_NAME, F.WRTNG_TITLE,
+	            TO_CHAR(F.WRTNG_DATE, 'YYYY-MM-DD') AS WRTNG_DATE, F.FAQ_HITS,
+	            ROW_NUMBER() OVER(ORDER BY F.FAQ_NUM DESC) AS RNUM
+	FROM FAQ F INNER JOIN INQRY_CTGRY ICT
+	                            ON F.CTGRY_NUM=ICT.CTGRY_NUM
+	                    LEFT OUTER JOIN EMP E
+	                            ON F.EMP_NUM=E.EMP_NUM               
+    WHERE 1=1
+	    <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn == 0">
+							AND F.WRTNG_TITLE LIKE '%' || #{searchTxt} || '%'
+						</when>
+						
+						<when test="searchGbn == 1">
+							AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+	    )FQ
+	WHERE FQ.RNUM BETWEEN #{startCount} AND #{endCount}
+</select>
+
+<select id="getfaqCnt" resultType="Integer" parameterType="hashmap">
+	SELECT COUNT(*) AS CNT
+	FROM FAQ F INNER JOIN INQRY_CTGRY ICT
+	                            ON F.CTGRY_NUM=ICT.CTGRY_NUM
+	                    LEFT OUTER JOIN EMP E
+	                            ON F.EMP_NUM=E.EMP_NUM
+    WHERE 1=1
+	<if test="searchTxt != null and searchTxt != ''">
+		<choose>
+		<!-- searchGbn: 제목, 작성자 -->
+			<when test="searchGbn == 0">
+				AND F.WRTNG_TITLE LIKE '%' || #{searchTxt} || '%'
+			</when>
+			<when test="searchGbn == 1">
+				AND E.EMP_NAME LIKE '%' || #{searchTxt} || '%'
+			</when>
+		</choose>
+	</if>
+</select>
+
+<select id="getfaqdt" resultType="hashmap" parameterType="hashmap">
+	SELECT  F.FAQ_NUM, ICT.CTGRY_NAME, F.WRTNG_TITLE, F.WRTNG_CONT, E.EMP_NAME,
+			   TO_CHAR(WRTNG_DATE, 'YYYY-MM-DD HH24:MI:SS') AS WRTNG_DATE
+		FROM FAQ F INNER JOIN INQRY_CTGRY ICT
+		                   ON F.CTGRY_NUM = ICT.CTGRY_NUM
+                          
+		             LEFT OUTER JOIN EMP E
+			                      ON F.EMP_NUM = E.EMP_NUM
+		WHERE F.FAQ_NUM = #{no}
+</select>
+
+<insert id="faqAdd" parameterType="hashmap">
+	INSERT INTO FAQ(FAQ_NUM, EMP_NUM, WRTNG_TITLE, WRTNG_CONT, CTGRY_NUM)
+	VALUES(FAQ_SEQ.NEXTVAL, #{emp_num}, #{title}, #{cont}, #{ctgry_num})
+</insert>
+
+<update id="faqUpdate" parameterType="hashmap">
+	UPDATE FAQ SET WRTNG_TITLE=#{title}, WRTNG_CONT=#{cont}, CTGRY_NUM= #{ctgry_num}
+	WHERE FAQ_NUM = #{no}	
+</update>
+<delete id="faqDelete" parameterType="hashmap">
+		DELETE FROM FAQ
+		WHERE FAQ_NUM = #{no}
+</delete>
+
+<update id="updateHit" parameterType="hashmap">
+		UPDATE FAQ SET  FAQ_HITS= FAQ_HITS + 1
+		WHERE FAQ_NUM = #{no}
+</update>
+</mapper>

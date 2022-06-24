@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="clndr">
+<!-- 캘린더 조회 -->
+<select id="getSchdl" parameterType="hashmap" resultType="hashmap">
+SELECT SCHDL_NUM AS ID, SCHDL_TITLE AS TITLE,
+CASE WHEN ALDY_DVSN = '1' THEN TO_CHAR(SCHDL_START_TIME,'YYYY-MM-DD')
+    ELSE TO_CHAR(SCHDL_START_TIME,'YYYY-MM-DD')||'T'||TO_CHAR(SCHDL_START_TIME,'HH24:MI:SS') END AS "START",
+CASE WHEN ALDY_DVSN = '1' THEN TO_CHAR(SCHDL_END_TIME+1,'YYYY-MM-DD')
+     ELSE TO_CHAR(SCHDL_END_TIME,'YYYY-MM-DD')||'T'||TO_CHAR(SCHDL_END_TIME,'HH24:MI:SS') END AS "END", 
+DEL_DVSN, TO_CHAR(SCHDL_START_TIME,'YYYY-MM-DD') AS START_DATE, TO_CHAR(SCHDL_START_TIME,'HH24:MI') AS START_TIME,
+    CASE WHEN SCHDL_CTGRY_NUM = 0 THEN '#a17fed'
+         WHEN SCHDL_CTGRY_NUM = 1 THEN '#fb8484'
+         WHEN SCHDL_CTGRY_NUM = 2 THEN '#ffb264'
+         WHEN SCHDL_CTGRY_NUM = 3 THEN '#ffd352'
+         WHEN SCHDL_CTGRY_NUM = 4 THEN '#66BB6A'
+         WHEN SCHDL_CTGRY_NUM = 5 THEN '#2fc1af'
+         WHEN SCHDL_CTGRY_NUM = 6 THEN '#76a7f7'
+         WHEN SCHDL_CTGRY_NUM = 7 THEN '#4d75b5'
+         ELSE '#66BB6A' 
+    END AS COLOR, REPLACE(REPLACE(ALDY_DVSN,'1','true'),'0','false') AS ALL_DAY, 
+    CASE WHEN SCHDL_CTGRY_NUM = 0 THEN 'user_dsgnt_schdl'
+         WHEN SCHDL_CTGRY_NUM = 1 THEN 'bsns_schdl'
+         WHEN SCHDL_CTGRY_NUM = 2 THEN 'leave_schdl'
+         WHEN SCHDL_CTGRY_NUM = 3 THEN 'edctn_schdl'
+         WHEN SCHDL_CTGRY_NUM = 4 THEN 'mtng_schdl'
+         WHEN SCHDL_CTGRY_NUM = 5 THEN 'get_tgthr_schdl'
+         WHEN SCHDL_CTGRY_NUM = 6 THEN 'bsns_trip_schdl'
+         WHEN SCHDL_CTGRY_NUM = 7 THEN 'devel_schdl'
+         
+    END AS SCHDL_CTGRY_NAME, SCHDL_CTGRY_NUM, SCHDL_TYPE_NUM, A.DEPT_NUM, S.EMP_NUM
+    
+FROM SCHDL S INNER JOIN APNTM A
+                ON S.EMP_NUM = A.EMP_NUM
+WHERE #{clndrDate} BETWEEN TO_CHAR(ADD_MONTHS(TRUNC(SCHDL_START_TIME,'MM'),-1),'YYYYMM') 
+                   AND TO_CHAR(ADD_MONTHS(TRUNC(SCHDL_END_TIME,'MM'),+1),'YYYYMM')AND DEL_DVSN = 0 
+                   AND SCHDL_CTGRY_NUM IN (#{user_dsgnt},#{bsns},#{leave},#{edctn},#{mtng},#{get_tgthr},#{bsns_trip},#{devel})
+                   AND((#{type}= 0 AND S.EMP_NUM = #{emp_num} AND S.SCHDL_TYPE_NUM = '0')
+                    OR(#{type}= 1 AND A.DEPT_NUM = #{dept_num} AND S.SCHDL_TYPE_NUM = '1')
+                    OR(#{type}= 2 AND S.SCHDL_TYPE_NUM = '2')) 
+UNION ALL
+
+SELECT *
+FROM (  SELECT RQST_NUM+10000000 AS ID ,
+        CASE WHEN 1=1 THEN '휴가' ELSE '휴가' END AS TITLE,
+        TO_CHAR(V.START_DATE,'YYYY-MM-DD') AS "START",
+        TO_CHAR(V.END_DATE+1,'YYYY-MM-DD') AS "END",
+        CASE WHEN 1=1 THEN 0 ELSE 0 END AS DEL_DVSN,
+        TO_CHAR(V.START_DATE,'YYYY-MM-DD') AS START_DATE,
+        TO_CHAR(V.START_DATE,'HH24:MI') AS START_TIME,
+        CASE WHEN 1=1 THEN '#ffb264' ELSE '#ffb264' END AS COLOR,
+        CASE WHEN 1=1 THEN 'true' ELSE 'true' END AS ALL_DAY,
+        CASE WHEN 1=1 THEN 'leave_schdl' ELSE 'leave_schdl' END AS SCHDL_CTGRY_NAME,
+        CASE WHEN 1=1 THEN 2 ELSE 2 END AS SCHDL_CTGRY_NUM,
+        CASE WHEN 1=1 THEN 0 ELSE 0 END AS SCHDL_TYPE_NUM, A.DEPT_NUM, V.RQST_EMP_NUM AS EMP_NUM
+        
+        FROM VCTN_RQST V INNER JOIN APNTM A
+                        ON V.RQST_EMP_NUM = A.EMP_NUM
+        WHERE RQST_EMP_NUM = #{emp_num})
+WHERE ((#{type}= 0 AND EMP_NUM = #{emp_num} AND SCHDL_TYPE_NUM = 0)
+     OR(#{type}= 1 AND DEPT_NUM = #{dept_num} AND SCHDL_TYPE_NUM = 1)
+     OR(#{type}= 2 AND SCHDL_TYPE_NUM = 2))
+     AND SCHDL_CTGRY_NUM IN (#{user_dsgnt},#{bsns},#{leave},#{edctn},#{mtng},#{get_tgthr},#{bsns_trip},#{devel})
+</select>
+<!-- 상세보기. -->
+<select id="dtlSchdl" parameterType="hashmap" resultType="hashmap">
+SELECT SCHDL_NUM AS ID, SCHDL_TITLE AS TITLE,  TO_CHAR(SCHDL_START_TIME,'YYYY-MM-DD')||'T'||TO_CHAR(SCHDL_START_TIME,'HH24:MI:SS') AS "START",
+TO_CHAR(SCHDL_END_TIME,'YYYY-MM-DD')||'T'||TO_CHAR(SCHDL_END_TIME,'HH24:MI:SS') AS "END", SCHDL_TYPE_NUM, SCHDL_CTGRY_NUM,
+SCHDL_PLACE, SCHDL_CONT, ALDY_DVSN, USER_CTGRY_NAME, TO_CHAR(SCHDL_START_TIME,'YYYY-MM-DD') AS START_DATE, TO_CHAR(SCHDL_START_TIME,'HH24:MI') AS START_TIME,
+TO_CHAR(SCHDL_END_TIME,'YYYY-MM-DD') AS END_DATE, TO_CHAR(SCHDL_END_TIME,'HH24:MI') AS END_TIME,
+TO_CHAR(SCHDL_START_TIME,'YYYY-MM-DD') AS START_UPDATE, TO_CHAR(SCHDL_END_TIME,'YYYY-MM-DD') AS END_UPDATE,
+EMP_NUM
+
+FROM SCHDL 
+WHERE SCHDL_NUM = #{id} AND DEL_DVSN = 0
+
+UNION ALL
+ 
+SELECT *
+FROM(   SELECT RQST_NUM+10000000 AS ID ,
+        CASE WHEN 1=1 THEN '휴가' ELSE '휴가' END AS TITLE,
+        TO_CHAR(START_DATE,'YYYY-MM-DD')||'T'||TO_CHAR(START_DATE,'HH24:MI:SS') AS "START",
+        TO_CHAR(END_DATE,'YYYY-MM-DD')||'T'||TO_CHAR(END_DATE,'HH24:MI:SS') AS "END",
+        CASE WHEN 1=1 THEN 0 ELSE 0 END AS SCHDL_TYPE_NUM,
+        CASE WHEN 1=1 THEN 2 ELSE 2 END AS SCHDL_CTGRY_NUM,
+        CASE WHEN 1=1 THEN ' ' ELSE ' ' END AS SCHDL_PLACE,
+        CASE WHEN 1=1 THEN ' ' ELSE ' ' END AS SCHDL_CONT,
+        CASE WHEN 1=1 THEN 1 ELSE 1 END AS ALDY_DNSN,
+        CASE WHEN 1=1 THEN '' ELSE '' END AS USER_CTGRY_NAME,
+        TO_CHAR(START_DATE,'YYYY-MM-DD') AS START_DATE,
+        TO_CHAR(START_DATE,'HH24:MI') AS START_TIME,
+        TO_CHAR(END_DATE,'YYYY-MM-DD') AS END_DATE,
+        TO_CHAR(END_DATE,'HH24:MI') AS END_TIME, 
+        TO_CHAR(START_DATE,'YYYY-MM-DD') AS START_UPDATE,
+        TO_CHAR(END_DATE,'YYYY-MM-DD') AS END_UPDATE,
+        RQST_EMP_NUM AS EMP_NUM 
+        FROM VCTN_RQST) 
+WHERE ID = #{id}
+</select>
+<!-- 일정등록 -->
+<insert id="clndrAdd" parameterType="hashmap">
+INSERT INTO SCHDL (SCHDL_NUM, SCHDL_TYPE_NUM, SCHDL_CTGRY_NUM,EMP_NUM,
+                   USER_CTGRY_NAME, SCHDL_TITLE, SCHDL_PLACE, SCHDL_CONT,
+                   SCHDL_START_TIME, SCHDL_END_TIME, ALDY_DVSN)
+VALUES (SCHDL_SEQ.NEXTVAL, #{schdl_type}, #{schdl_ctgry}, #{emp_num}, #{user_ctgry}, #{schdl_title}, #{schdl_place}, #{schdl_cont},
+         TO_DATE(#{schdl_start_date}||' '||#{schdl_start_time}, 'YYYY-MM-DD HH24:MI'),  TO_DATE(#{schdl_end_date}||' '||#{schdl_end_time}, 'YYYY-MM-DD HH24:MI'), #{aldy_dvsn})
+</insert>
+<!-- 일정삭제 -->
+<update id="clndrDelete" parameterType="hashmap">
+UPDATE SCHDL SET DEL_DVSN = 1
+WHERE SCHDL_NUM = #{id}
+</update> 
+<!-- 일정수정 -->
+<update id="clndrUpdate" parameterType="hashmap">
+UPDATE SCHDL SET SCHDL_TYPE_NUM = #{schdl_type},
+                 SCHDL_CTGRY_NUM = #{schdl_ctgry},
+                 USER_CTGRY_NAME = #{user_ctgry},
+                 SCHDL_TITLE = #{schdl_title},
+                 SCHDL_PLACE = #{schdl_place},
+                 SCHDL_CONT = #{schdl_cont},
+                 SCHDL_START_TIME = TO_DATE(#{schdl_start_date}||' '||#{schdl_start_time}, 'YYYY-MM-DD HH24:MI:SS'),
+                 SCHDL_END_TIME = TO_DATE(#{schdl_end_date}||' '||#{schdl_end_time}, 'YYYY-MM-DD HH24:MI:SS'),
+                 ALDY_DVSN = #{aldy_dvsn}
+WHERE SCHDL_NUM = #{schdl_num} 
+</update>
+</mapper>

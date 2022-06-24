@@ -1,0 +1,177 @@
+@charset "UTF-8";
+/* 가로 사이즈 조정용 */
+.cont_wrap {
+	width: 1013px;;
+}
+.body {
+	display: block;
+	background-color: white;
+	width: 1013px;
+	height: 100%;
+	margin: auto;
+}
+.bodyWrap {
+	display: block;
+	background-color: white;
+	width: 927px;
+	height: 100%;
+	margin: 40px auto;
+}
+.popup_bg {
+	/* 숨김용 */
+	display: none;
+}
+.popup {
+	/* 숨김용 */
+	display: none;
+	/* 크기변경용 */
+	width: 600px;
+	height: 400px;
+	top: calc(50% - 200px); /* 높이 반  */
+	left: calc(50% - 300px); /* 너비 반 */
+}
+
+.popup_cont {
+	/* 내용 변경용 */
+	font-size: 10.5pt;
+}
+	/* 개인 작업 영역 */
+#att {
+	display: none;
+}
+.fileName{
+	width: 100px;
+	margin-left : 5px;
+	margin-right : 5px;
+	overflow-x: auto;
+	font-size: 14px;
+    color: black;
+    line-height: 33px;
+}
+
+table{
+	border: 1px;
+	width: 927px;
+	margin: 40px auto;
+}
+td:nth-child(2), td:nth-child(4){
+	border-bottom: 1px solid #d7d7d7;
+}
+
+td:nth-child(1), td:nth-child(3){
+	text-align: center;
+}
+
+tr:nth-child(8) td:nth-child(2) {
+	border: none;
+}
+
+.btn{
+	width : 90px;
+	height: 40px;
+}
+.address{
+	width : 90px;
+	height: 100px;
+}
+.btn, .address{
+	background-color: #fff;
+	border-radius: 3px;
+	font-weight: bold;
+	font-size: 14px;
+	width: 150px;
+	border: none;
+	text-align: center;
+}
+.date_sign{
+	text-align: center;
+}
+.btnImg:hover{
+	cursor: pointer;
+}
+.txt{
+	height: 33px;
+	width: 100%;
+	padding: 0 5px;
+	font-size: 10.5px;
+	color: black;
+	vertical-align: middle;
+	box-sizing: border-box;
+	outline: none;
+	border-radius: 3px;
+	line-height: 33px;
+	border: none;
+}
+.rvn_txt {
+	height: 33px;
+	width: 885px;
+	padding: 0 15px;
+	font-size: 14px;
+	color: black;
+	box-sizing: border-box;
+	outline: none;
+	border-radius: 3px;
+	line-height: 33px;
+	border: 1px solid #d7d7d7;
+	background-color: #F2F2F2;
+	text-align: left;
+	font-weight: bold;
+	margin-left: 40px;
+	margin-bottom: 5px;
+}
+.txt:hover{
+	cursor : pointer;
+}
+
+.btnImg{
+	width : 30px;
+	height: 30px;
+	text-align: right;
+	margin-left: 10px;
+}
+
+.imgPos{
+	width: 613px;
+	display: inline-block;
+	vertical-align: top;
+	text-align: right;
+}
+.cntrct_box_in {
+	width: 885px;
+	height: 100px;
+	border: 1px solid #d7d7d7;
+	border-radius: 7px;
+	margin-bottom: 18px;
+	margin-left: 40px;
+}
+.plus_btn {
+	display:inline-block;
+	vertical-align: middle;
+	width: 18px;
+	height: 18px;
+	background-size: 18px 18px;
+	float: right;
+	margin-right: 5px;
+	margin-top: 5.5px;
+}
+.plus_btn:hover {
+	cursor: pointer;
+}
+.txt_area {
+	width: 720px;
+	height: 200px;
+	border: 1px solid #d7d7d7;
+	border-radius: 7px;
+	margin-top: 5px;
+}
+textarea {
+	width: 757px;
+	height: 52px;
+	font-size: 10.5pt;
+	white-space: pre-wrap;
+	resize: none;
+	font-family: "맑은 고딕";
+	display: inline-block;
+	vertical-align: top;
+	outline: none;
+}

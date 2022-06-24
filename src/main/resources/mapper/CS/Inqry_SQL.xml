@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="in">
+	<select id="getInqryCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM INQRY I INNER JOIN INQRY_CTGRY ICT
+		                   ON I.CTGRY_NUM = ICT.CTGRY_NUM
+		             INNER JOIN INDVDL_CLNT ICL
+		                     ON I.CLNT_NUM = ICL.CLNT_NUM
+		             LEFT OUTER JOIN EMP E
+		                     ON I.EMP_NUM = E.EMP_NUM
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''"> <!-- 검색어가 있다면 -->
+			<choose>
+				<when test="searchGbn == 0">
+					AND I.WRTNG_TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 1">
+					AND ICL.CLNT_NAME LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn == 2">
+					AND I.WRTNG_DATE LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<!-- 목록 -->
+	<select id="getInqryList" resultType="hashmap" parameterType="hashmap">
+		SELECT IQ.INQRY_NUM, IQ.CTGRY_NAME, IQ.WRTNG_TITLE, IQ.CLNT_NAME, IQ.WRTNG_DATE, 
+		       IQ.ATT_FILE, IQ.ANSR, IQ.ANSR_ATT_FILE
+		FROM ( SELECT I.INQRY_NUM, ICT.CTGRY_NAME, I.WRTNG_TITLE, ICL.CLNT_NAME, TO_CHAR(I.WRTNG_DATE, 'YYYY-MM-DD') AS WRTNG_DATE, 
+		       I.ATT_FILE, DECODE(ANSR_TITLE, NULL, '대기', '완료') AS ANSR, I.ANSR_ATT_FILE, ROW_NUMBER() OVER(ORDER BY I.INQRY_NUM DESC) AS RNUM
+				FROM INQRY I INNER JOIN INQRY_CTGRY ICT
+				                   ON I.CTGRY_NUM = ICT.CTGRY_NUM
+				             INNER JOIN INDVDL_CLNT ICL
+				                     ON I.CLNT_NUM = ICL.CLNT_NUM
+				             LEFT OUTER JOIN EMP E
+				                     ON I.EMP_NUM = E.EMP_NUM
+				WHERE 1 = 1
+				<if test="searchTxt != null and searchTxt != ''"> <!-- 검색어가 있다면 -->
+					<choose>
+						<when test="searchGbn == 0">
+							AND I.WRTNG_TITLE LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 1">
+							AND ICL.CLNT_NAME LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 2">
+							AND TO_CHAR(WRTNG_DATE, 'YYYY-MM-DD') LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				) IQ
+		WHERE IQ.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!-- 상세보기 -->
+	<select id="getInqry" resultType="hashmap" parameterType="hashmap">
+		SELECT I.INQRY_NUM, ICT.CTGRY_NAME, I.WRTNG_TITLE, I.WRTNG_CONT, ICL.CLNT_NAME, ICL.PHONE_NUM_1, I.ATT_FILE, 
+			   TO_CHAR(WRTNG_DATE, 'YYYY-MM-DD') AS WRTNG_DATE, E.EMP_NAME, I.ANSR_TITLE, I.ANSR_CONT, I.ANSR_ATT_FILE,
+			   TO_CHAR(ANSR_DATE, 'YYYY-MM-DD') AS ANSR_DATE
+		FROM INQRY I INNER JOIN INQRY_CTGRY ICT
+		                   ON I.CTGRY_NUM = ICT.CTGRY_NUM
+		             INNER JOIN INDVDL_CLNT ICL
+		                     ON I.CLNT_NUM = ICL.CLNT_NUM
+		             LEFT OUTER JOIN EMP E
+			                      ON I.EMP_NUM = E.EMP_NUM
+		WHERE I.INQRY_NUM = #{no}
+	</select>
+	
+	<!-- 대응가이드 게시글 수 -->
+	<select id="inqryRspndCnt" resultType="Integer" parameterType="hashmap">
+		SELECT COUNT(*) AS CNT
+		FROM RSPND_GUIDE
+		WHERE DEL_CHECK = 1 AND CTGRY_NUM = 1
+	</select>
+	
+	<!-- 대응가이드 목록 -->
+	<select id="inqryRspndList" parameterType="hashmap" resultType="hashmap">
+		SELECT T.GUIDE_NUM, T.CTGRY_NAME, T.EMP_NAME, T.CLNT_TYPE, T.TYPE_CASE, T.RSPNS_PLAN, T.WRITE_DATE
+		FROM( SELECT R.GUIDE_NUM, C.CTGRY_NAME, E.EMP_NAME, R.CLNT_TYPE, R.TYPE_CASE, R.RSPNS_PLAN, TO_CHAR(R.WRITE_DATE, 'YYYY-MM-DD')AS WRITE_DATE, ROW_NUMBER() OVER(ORDER BY GUIDE_NUM DESC) AS RNUM
+		FROM( SELECT CTGRY_NUM, CTGRY_NAME
+		      FROM RSPND_GUIDE_CTGRY)C INNER JOIN (SELECT GUIDE_NUM, EMP_NUM, CTGRY_NUM, CLNT_TYPE, TYPE_CASE, RSPNS_PLAN, WRITE_DATE, DEL_CHECK
+		                                           FROM RSPND_GUIDE
+		                                           WHERE DEL_CHECK = 1 ) R
+		                                       ON C.CTGRY_NUM = R.CTGRY_NUM
+		                               INNER JOIN EMP E
+		                                       ON R.EMP_NUM = E.EMP_NUM
+			 WHERE R.CTGRY_NUM = 1 ) T
+		WHERE T.RNUM BETWEEN #{startCount} AND #{endCount}
+	</select>
+	
+	<!-- 대응가이드 등록 -->
+	<insert id="inqryRspndAdd" parameterType="hashmap">
+		INSERT INTO RSPND_GUIDE(GUIDE_NUM, CTGRY_NUM, EMP_NUM, CLNT_TYPE, TYPE_CASE, RSPNS_PLAN)
+		VALUES(RSPND_GUIDE_SEQ.NEXTVAL, 1, #{emp_num}, #{clnt_type}, #{type_case}, #{rspns_plan})
+	</insert>
+	
+	<!-- 대응가이드 수정 -->
+	<update id="inqryRspndUp" parameterType="hashmap">
+		UPDATE RSPND_GUIDE SET CLNT_TYPE = #{clnt_type},
+		                       TYPE_CASE = #{type_case},
+		                       RSPNS_PLAN = #{rspns_plan}
+		WHERE GUIDE_NUM = #{guide_num}
+	</update>
+	
+	<!-- 대응가이드 삭제 -->
+	<update id="inqryRspndDel" parameterType="hashmap">
+		UPDATE RSPND_GUIDE SET DEL_CHECK = 0
+		WHERE GUIDE_NUM = #{guide_num}
+	</update>
+	
+	
+	<!-- 답변등록 -->
+	<update id="ansrAdd" parameterType="hashmap">
+		UPDATE INQRY SET EMP_NUM = #{emp_num},
+		                 ANSR_TITLE = #{ansr_title},
+		                 ANSR_CONT = #{ansr_cont},
+		                 ANSR_ATT_FILE = #{ansr_attFile},
+		                 ANSR_DATE = SYSDATE
+		WHERE INQRY_NUM = #{no}
+	</update>
+	
+	<!-- 답변수정 -->
+	<update id="ansrUpdate" parameterType="hashmap">
+		UPDATE INQRY SET EMP_NUM = #{emp_num},
+		                 ANSR_TITLE = #{ansr_title},
+		                 ANSR_CONT = #{ansr_cont},
+		                 ANSR_ATT_FILE = #{ansr_attFile},
+		                 ANSR_DATE = SYSDATE
+		WHERE INQRY_NUM = #{no}
+	</update>
+	
+	<!-- 답변삭제 -->
+	<update id="ansrDelete" parameterType="hashmap">
+		UPDATE INQRY SET EMP_NUM = '',
+		                 ANSR_TITLE = '',
+		                 ANSR_CONT = '',
+		                 ANSR_ATT_FILE = ''
+		WHERE INQRY_NUM = #{no}
+	</update>
+</mapper>

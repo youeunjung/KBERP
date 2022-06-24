@@ -1,0 +1,17 @@
+@charset "UTF-8";
+/* 팝업내용 가운데 정렬 */
+.cont_bin {
+	text-align: center;
+}
+/* 팝업 한줄 내용 */
+.popContOneLine {
+	font-size: 12pt;
+	font-weight: bold;
+	line-height: 99px;
+}
+/* 팝업 두줄 내용 */
+.popContTwoLine {
+	font-size: 12pt;
+	font-weight: bold;
+	margin-top: 29px;
+}
